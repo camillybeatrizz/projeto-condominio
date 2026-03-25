@@ -1,0 +1,69 @@
+@startuml
+title Kondo - Diagrama de Sequência - WhatsApp / Autoatendimento (RF23 a RF27)
+
+actor Morador
+participant "WhatsApp" as WhatsApp
+participant "Twilio/Integração" as Twilio
+participant "Backend API" as Backend
+participant "Auth WhatsApp/OIDC" as Auth
+participant "CobrancaService" as CobrancaService
+participant "AreaComumService" as AreaService
+participant "ChamadoService" as ChamadoService
+database "PostgreSQL" as DB
+
+== RF23 Solicitação de 2ª Via de Boleto ==
+Morador -> WhatsApp: "2 via boleto"
+WhatsApp -> Twilio: mensagem recebida
+Twilio -> Backend: webhook mensagem
+Backend -> Auth: identificar morador e escopo
+Backend -> CobrancaService: buscar cobrança em aberto
+CobrancaService -> DB: select por usuário/unidade
+CobrancaService --> Backend: boleto/pix vigente
+Backend --> Twilio: resposta com boleto/QR Pix
+Twilio --> WhatsApp: envia 2ª via ao morador
+
+== RF24 Consulta de Débitos ==
+Morador -> WhatsApp: "consultar débitos"
+Twilio -> Backend: encaminhar mensagem
+Backend -> Auth: validar morador
+Backend -> CobrancaService: listar cobranças abertas
+CobrancaService -> DB: select abertas
+Backend --> Twilio: valores + vencimentos
+Twilio --> WhatsApp: lista de débitos
+
+== RF25 Reserva de Áreas Comuns ==
+Morador -> WhatsApp: "reservar churrasqueira 20/04 19h"
+Twilio -> Backend: enviar intenção
+Backend -> Auth: validar escopo
+Backend -> AreaService: reservar(data, horário, área)
+AreaService -> DB: verificar disponibilidade
+alt indisponível
+    Backend --> Twilio: informar conflito de horário
+else disponível
+    AreaService -> DB: gravar reserva
+    Backend --> Twilio: confirmar reserva
+end
+Twilio --> WhatsApp: confirmação automática
+
+== RF26 Abertura de Chamado de Manutenção ==
+Morador -> WhatsApp: "abrir chamado vazamento"
+Twilio -> Backend: encaminhar mensagem
+Backend -> Auth: validar morador
+Backend -> ChamadoService: abrir chamado(unidade, descrição)
+ChamadoService -> DB: validar unidade do morador
+ChamadoService -> DB: criar chamado status ABERTO
+ChamadoService --> Backend: número identificador
+Backend --> Twilio: retornar protocolo
+Twilio --> WhatsApp: chamado criado
+
+== RF27 Consulta de Status do Chamado ==
+Morador -> WhatsApp: "status chamado 123"
+Twilio -> Backend: encaminhar consulta
+Backend -> Auth: validar morador
+Backend -> ChamadoService: consultarStatus(chamado)
+ChamadoService -> DB: buscar por id + escopo
+ChamadoService --> Backend: status atual
+Backend --> Twilio: retornar status
+Twilio --> WhatsApp: status atualizado
+
+@enduml

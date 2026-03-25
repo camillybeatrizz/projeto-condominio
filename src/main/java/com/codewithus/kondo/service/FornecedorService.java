@@ -2,8 +2,9 @@ package com.codewithus.kondo.service;
 
 import com.codewithus.kondo.dto.fornecedor.FornecedorRequestDTO;
 import com.codewithus.kondo.dto.fornecedor.FornecedorResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface FornecedorService {
@@ -12,7 +13,7 @@ public interface FornecedorService {
 
     FornecedorResponseDTO buscarPorId(UUID id);
 
-    List<FornecedorResponseDTO> listar();
+    Page<FornecedorResponseDTO> listar(UUID condominioId, String nome, String cnpj, Pageable pageable);
 
     FornecedorResponseDTO atualizar(UUID id, FornecedorRequestDTO dto);
 

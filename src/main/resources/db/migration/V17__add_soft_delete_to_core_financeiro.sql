@@ -1,0 +1,11 @@
+ALTER TABLE cobranca ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE cobranca ADD COLUMN deleted_by VARCHAR(255);
+
+ALTER TABLE pagamento ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE pagamento ADD COLUMN deleted_by VARCHAR(255);
+
+ALTER TABLE chamado ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE chamado ADD COLUMN deleted_by VARCHAR(255);
+
+ALTER TABLE despesa ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE despesa ADD COLUMN deleted_by VARCHAR(255);

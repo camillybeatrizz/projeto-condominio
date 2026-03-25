@@ -16,7 +16,6 @@ public class UsuarioBusinessIntegrationTest extends IntegrationTestSupport {
                 {
                 "nome": "Aline Silva",
                 "email": "aline@email.com",
-                "senha": "123456",
                 "telefone": "(83) 99999-9999",
                 "ativo": true
                 }
@@ -25,7 +24,6 @@ public class UsuarioBusinessIntegrationTest extends IntegrationTestSupport {
                 {
                 "nome": "Maria Souza",
                 "email": "aline@email.com",
-                "senha": "abcdef",
                 "telefone": "(83) 98888-8888",
                 "ativo": true
                 }

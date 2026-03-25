@@ -1,0 +1,48 @@
+@startuml
+title Kondo - Diagrama de Sequência - Prestação de Contas Automática (RF33 a RF37)
+
+actor Sindico
+participant "Frontend React" as Frontend
+participant "Backend API" as Backend
+participant "Scheduler" as Scheduler
+participant "RelatorioFinanceiroService" as Relatorio
+participant "DespesaService" as DespesaService
+participant "AnexoService" as AnexoService
+participant "GraficoService" as GraficoService
+participant "PdfService" as PdfService
+database "PostgreSQL" as DB
+collections "Storage de Arquivos" as Storage
+
+== RF33 Geração Automática de Relatório Mensal ==
+Scheduler -> Relatorio: gerarRelatorioMensal(periodo)
+Relatorio -> DB: buscar receitas do período
+Relatorio -> DB: buscar despesas do período
+Relatorio --> Scheduler: relatório consolidado com saldo
+
+== RF34 Categorização Automática de Despesas ==
+DespesaService -> Relatorio: enviar despesas categorizadas
+Relatorio -> DB: validar categoria obrigatória
+Relatorio -> DB: consolidar por categoria
+
+== RF35 Inclusão de Documentos Comprobatórios ==
+Sindico -> Frontend: anexar comprovantes/notas
+Frontend -> Backend: POST /relatorios/anexos
+Backend -> AnexoService: salvar arquivo
+AnexoService -> Storage: upload arquivo
+AnexoService -> DB: vincular arquivo à despesa
+Backend --> Frontend: anexo salvo
+
+== RF36 Geração de Gráficos Financeiros ==
+Relatorio -> GraficoService: gerar gráficos de receitas, despesas e inadimplência
+GraficoService -> DB: ler dados consolidados
+GraficoService --> Relatorio: gráficos gerados
+
+== RF37 Exportação em PDF ==
+Sindico -> Frontend: exportar prestação de contas
+Frontend -> Backend: GET /relatorios/exportar-pdf
+Backend -> Relatorio: montar relatório final
+Relatorio -> PdfService: gerar PDF padronizado
+PdfService --> Backend: arquivo PDF
+Backend --> Frontend: download do PDF
+
+@enduml

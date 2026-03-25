@@ -226,4 +226,68 @@ class ContratoIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Contrato não encontrado"));
     }
+
+    @Test
+    void deveRetornar400QuandoCriarContratoComVigenciaSobrepostaParaMesmoFornecedorECondominio() throws Exception {
+        Endereco endereco = new Endereco();
+        endereco.setLogradouro("Rua Financeira");
+        endereco.setNumero("88");
+        endereco.setComplemento("Sala 2");
+        endereco.setBairro("Centro");
+        endereco.setCidade("Joao Pessoa");
+        endereco.setEstado("PB");
+        endereco.setCep("58000-200");
+        endereco = enderecoRepository.save(endereco);
+
+        String condominioPayload = """
+                {
+                  "nome": "Condominio Financeiro",
+                  "cnpj": "21.222.333/0001-44",
+                  "telefone": "(83) 3111-2222",
+                  "enderecoId": "%s"
+                }
+                """.formatted(endereco.getId());
+
+        String condominioResponse = postAndReturnBody("/condominios", condominioPayload);
+        String condominioId = jsonField(condominioResponse, "id");
+
+        Fornecedor fornecedor = new Fornecedor();
+        fornecedor.setNome("Fornecedor Sobreposto");
+        fornecedor.setCnpj("66.777.888/0001-99");
+        fornecedor.setTelefone("(83) 3222-3333");
+        fornecedor = fornecedorRepository.save(fornecedor);
+
+        String primeiroPayload = """
+                {
+                  "descricao": "Manutencao predial",
+                  "valor": 1200.00,
+                  "dataInicio": "2026-01-01",
+                  "dataFim": "2026-06-30",
+                  "fornecedorId": "%s",
+                  "condominioId": "%s"
+                }
+                """.formatted(fornecedor.getId(), condominioId);
+
+        mockMvc.perform(post("/contratos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(primeiroPayload))
+                .andExpect(status().isCreated());
+
+        String sobrepostoPayload = """
+                {
+                  "descricao": "Manutencao complementar",
+                  "valor": 1500.00,
+                  "dataInicio": "2026-06-01",
+                  "dataFim": "2026-12-31",
+                  "fornecedorId": "%s",
+                  "condominioId": "%s"
+                }
+                """.formatted(fornecedor.getId(), condominioId);
+
+        mockMvc.perform(post("/contratos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sobrepostoPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Já existe contrato com vigência sobreposta para este fornecedor no condomínio informado"));
+    }
 }

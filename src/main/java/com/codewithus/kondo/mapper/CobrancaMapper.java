@@ -15,6 +15,7 @@ public class CobrancaMapper {
         entity.setVencimento(dto.vencimento());
         entity.setStatus(dto.status());
         entity.setCompetencia(dto.competencia());
+        entity.setReferenciaExterna(dto.referenciaExterna());
         entity.setUnidade(unidade);
         return entity;
     }
@@ -24,6 +25,7 @@ public class CobrancaMapper {
         entity.setVencimento(dto.vencimento());
         entity.setStatus(dto.status());
         entity.setCompetencia(dto.competencia());
+        entity.setReferenciaExterna(dto.referenciaExterna());
         entity.setUnidade(unidade);
     }
 
@@ -34,6 +36,8 @@ public class CobrancaMapper {
                 entity.getVencimento(),
                 entity.getStatus(),
                 entity.getCompetencia(),
+                entity.getReferenciaExterna(),
+                entity.getUrlPagamentoExterno(),
                 entity.getUnidade() != null ? entity.getUnidade().getId() : null,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

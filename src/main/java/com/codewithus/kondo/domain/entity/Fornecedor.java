@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -21,4 +22,6 @@ public class Fornecedor extends BaseEntity {
     private String nome;
     private String cnpj;
     private String telefone;
+    private LocalDateTime deletedAt;
+    private String deletedBy;
 }

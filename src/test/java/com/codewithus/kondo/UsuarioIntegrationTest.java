@@ -16,7 +16,6 @@ class UsuarioIntegrationTest extends IntegrationTestSupport {
                 {
                   "nome": "Aline Silva",
                   "email": "aline@example.com",
-                  "senha": "senha-segura",
                   "telefone": "(83) 98888-7777",
                   "ativo": true
                 }
@@ -40,7 +39,6 @@ class UsuarioIntegrationTest extends IntegrationTestSupport {
                 {
                   "nome": "Aline Silva",
                   "email": "email-invalido",
-                  "senha": "senha-segura",
                   "telefone": "(83) 98888-7777",
                   "ativo": true
                 }

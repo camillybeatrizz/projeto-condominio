@@ -2,8 +2,10 @@ package com.codewithus.kondo.service;
 
 import com.codewithus.kondo.dto.pagamento.PagamentoRequestDTO;
 import com.codewithus.kondo.dto.pagamento.PagamentoResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public interface PagamentoService {
@@ -12,7 +14,7 @@ public interface PagamentoService {
 
     PagamentoResponseDTO buscarPorId(UUID id);
 
-    List<PagamentoResponseDTO> listar();
+    Page<PagamentoResponseDTO> listar(UUID condominioId, LocalDate dataInicio, LocalDate dataFim, Pageable pageable);
 
     PagamentoResponseDTO atualizar(UUID id, PagamentoRequestDTO dto);
 

@@ -1,0 +1,11 @@
+ALTER TABLE fornecedor ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE fornecedor ADD COLUMN deleted_by VARCHAR(255);
+
+ALTER TABLE unidade ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE unidade ADD COLUMN deleted_by VARCHAR(255);
+
+ALTER TABLE bloco ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE bloco ADD COLUMN deleted_by VARCHAR(255);
+
+ALTER TABLE condominio ADD COLUMN deleted_at TIMESTAMP;
+ALTER TABLE condominio ADD COLUMN deleted_by VARCHAR(255);

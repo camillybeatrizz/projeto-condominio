@@ -1,0 +1,102 @@
+@startuml
+title Kondo - Diagrama de Sequência - Gestão de Condomínio e Estrutura (RF08 a RF12)
+
+actor "Administrador/Síndico" as Gestor
+participant "Frontend React" as Frontend
+participant "Backend API" as Backend
+participant "Auth/Scope Filter" as Scope
+participant "CondominioService" as CondService
+participant "BlocoService" as BlocoService
+participant "UnidadeService" as UnidadeService
+participant "AcessoService" as AcessoService
+participant "AreaComumService" as AreaService
+participant "EnderecoService" as EndService
+participant "LogAuditoriaService" as LogService
+database "PostgreSQL" as DB
+
+== RF08 Cadastro de Condomínio ==
+Gestor -> Frontend: cadastrar/editar condomínio
+Frontend -> Backend: POST/PUT /condominios
+Backend -> Scope: validar perfil/escopo
+Scope --> Backend: autorizado
+Backend -> CondService: salvar(dados)
+CondService -> EndService: validar enderecoId
+EndService -> DB: select endereço
+alt endereço inexistente
+    CondService --> Backend: erro de negócio
+    Backend --> Frontend: 404/400
+else válido
+    CondService -> DB: validar CNPJ único
+    alt CNPJ duplicado
+        CondService --> Backend: conflito
+        Backend --> Frontend: 409
+    else ok
+        CondService -> DB: insert/update condomínio
+        CondService -> LogService: registrar ação
+        LogService -> DB: salvar log
+        Backend --> Frontend: 200/201
+    end
+end
+
+== RF09 Cadastro de Blocos ==
+Gestor -> Frontend: cadastrar bloco
+Frontend -> Backend: POST /blocos
+Backend -> Scope: validar escopo do condomínio
+Backend -> BlocoService: salvar(bloco)
+BlocoService -> DB: validar condomínio pai
+alt condomínio inexistente
+    Backend --> Frontend: 404
+else válido
+    BlocoService -> DB: insert bloco
+    Backend --> Frontend: 201
+end
+
+== RF10 Cadastro de Unidades ==
+Gestor -> Frontend: cadastrar unidade
+Frontend -> Backend: POST /unidades
+Backend -> Scope: validar escopo
+Backend -> UnidadeService: salvar(unidade)
+UnidadeService -> DB: validar bloco
+alt bloco inexistente
+    Backend --> Frontend: 404
+else válido
+    UnidadeService -> DB: validar número único no bloco
+    alt número duplicado
+        Backend --> Frontend: 409
+    else ok
+        UnidadeService -> DB: insert unidade
+        Backend --> Frontend: 201
+    end
+end
+
+== RF11 Cadastro de Moradores ==
+Gestor -> Frontend: vincular morador à unidade
+Frontend -> Backend: POST /acessos ou PUT /unidades
+Backend -> Scope: validar escopo
+Backend -> AcessoService: criar/atualizar acesso MORADOR
+AcessoService -> DB: validar usuário
+AcessoService -> DB: validar condomínio e unidade
+AcessoService -> DB: verificar duplicidade de acesso
+AcessoService -> DB: verificar se unidade já possui morador
+alt inconsistência
+    Backend --> Frontend: 409/400
+else consistente
+    AcessoService -> DB: salvar acesso
+    AcessoService -> DB: sincronizar Unidade.morador
+    Backend --> Frontend: 201/200
+end
+
+== RF12 Cadastro de Áreas Comuns ==
+Gestor -> Frontend: cadastrar área comum
+Frontend -> Backend: POST /areas-comuns
+Backend -> Scope: validar escopo
+Backend -> AreaService: salvar(area)
+AreaService -> DB: validar condomínio ou bloco
+alt vínculo inválido
+    Backend --> Frontend: 400/404
+else válido
+    AreaService -> DB: insert área comum
+    Backend --> Frontend: 201
+end
+
+@enduml

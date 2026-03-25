@@ -12,7 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
-public abstract class IntegrationTestSupport {
+public abstract class IntegrationTestSupport extends DatabaseCleanupSupport {
 
     @Autowired
     protected MockMvc mockMvc;

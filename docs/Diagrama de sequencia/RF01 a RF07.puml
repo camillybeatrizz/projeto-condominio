@@ -1,0 +1,76 @@
+@startuml
+title Kondo - Diagrama de Sequência - Autenticação e Segurança (RF01 a RF07)
+
+actor Usuario
+participant "Frontend React" as Frontend
+participant "Identity Provider\n(Keycloak/Pinniped)" as IdP
+participant "Backend API\n(Resource Server)" as Backend
+participant "JWKS/Validador JWT" as JWKS
+participant "UsuarioService" as UsuarioService
+participant "UsuarioRepository" as UsuarioRepo
+participant "AutorizacaoService" as Authz
+participant "LogAuditoriaService" as LogService
+database "PostgreSQL" as DB
+
+== RF01 / RF02 / RF04 / RF05 ==
+Usuario -> Frontend: acessa sistema
+Frontend -> IdP: redireciona para login OIDC (Authorization Code + PKCE)
+IdP -> Usuario: autentica credenciais
+IdP --> Frontend: retorna access_token JWT
+Frontend -> Backend: requisição com Bearer Token
+
+Backend -> JWKS: validar assinatura e claims do JWT
+alt token inválido/expirado
+    JWKS --> Backend: inválido
+    Backend -> LogService: registrar falha de autenticação/autorização
+    LogService -> DB: salvar log
+    Backend --> Frontend: HTTP 401
+else token válido
+    JWKS --> Backend: válido
+    Backend -> Authz: validar roles/claims e escopo
+    alt sem permissão
+        Authz --> Backend: acesso negado
+        Backend -> LogService: registrar falha de autorização
+        LogService -> DB: salvar log
+        Backend --> Frontend: HTTP 403
+    else autorizado
+        Authz --> Backend: acesso permitido
+        Backend -> UsuarioService: sincronizar por externalId (sub)
+        UsuarioService -> UsuarioRepo: buscar por externalId
+        UsuarioRepo -> DB: select
+        alt usuário não existe
+            UsuarioService -> UsuarioRepo: criar usuário local
+            UsuarioRepo -> DB: insert
+        else usuário existe
+            UsuarioService -> UsuarioRepo: atualizar dados locais
+            UsuarioRepo -> DB: update
+        end
+        UsuarioService --> Backend: usuário sincronizado
+        Backend -> LogService: registrar autenticação com sucesso
+        LogService -> DB: salvar log
+        Backend --> Frontend: 200 OK + dados/autorização
+    end
+end
+
+== RF03 ==
+Usuario -> Frontend: clica em "Esqueci minha senha"
+Frontend -> IdP: redirecionar para fluxo de recuperação
+IdP --> Usuario: executa redefinição externamente
+note right of IdP
+Kondo não armazena
+nem redefine senha localmente
+end note
+
+== RF06 ==
+Usuario -> Frontend: solicitar logout
+Frontend -> IdP: logout federado
+IdP --> Frontend: sessão encerrada
+Frontend -> Frontend: limpar token local
+Frontend -> Backend: nova requisição sem token válido
+Backend --> Frontend: HTTP 401
+
+== RF07 ==
+Backend -> LogService: registrar autenticação, falhas, exclusões e alterações críticas
+LogService -> DB: persistir usuário, externalId, data/hora, ação, entidade, origem
+
+@enduml

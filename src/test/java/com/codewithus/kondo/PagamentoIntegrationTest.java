@@ -3,6 +3,7 @@ package com.codewithus.kondo;
 import com.codewithus.kondo.domain.entity.Cobranca;
 import com.codewithus.kondo.domain.enums.StatusCobrancaEnum;
 import com.codewithus.kondo.repository.CobrancaRepository;
+import com.codewithus.kondo.repository.PagamentoRepository;
 import com.codewithus.kondo.support.IntegrationTestSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ class PagamentoIntegrationTest extends IntegrationTestSupport {
 
     @Autowired
     private CobrancaRepository cobrancaRepository;
+
+    @Autowired
+    private PagamentoRepository pagamentoRepository;
 
     @Test
     void deveCriarPagamentoComCobrancaExistente() throws Exception {
@@ -146,5 +150,58 @@ class PagamentoIntegrationTest extends IntegrationTestSupport {
         mockMvc.perform(get("/pagamentos/{id}", pagamentoId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Pagamento não encontrado"));
+
+        var pagamentoPersistido = pagamentoRepository.findById(UUID.fromString(pagamentoId)).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(pagamentoPersistido.getDeletedAt()).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(pagamentoPersistido.getDeletedBy()).isEqualTo("SYSTEM");
+    }
+
+    @Test
+    void deveManterTransactionIdGlobalmenteUnicoMesmoAposExclusaoLogica() throws Exception {
+        Cobranca cobranca = new Cobranca();
+        cobranca.setValor(new BigDecimal("220.00"));
+        cobranca.setVencimento(LocalDate.of(2026, 5, 10));
+        cobranca.setStatus(StatusCobrancaEnum.ABERTA);
+        cobranca.setCompetencia("2026-05");
+        cobranca = cobrancaRepository.save(cobranca);
+
+        String payload = """
+                {
+                  "valor": 220.00,
+                  "dataPagamento": "2026-05-08",
+                  "forma": "PIX",
+                  "transactionId": "TXN-GLOBAL-001",
+                  "cobrancaId": "%s"
+                }
+                """.formatted(cobranca.getId());
+
+        String pagamentoResponse = postAndReturnBody("/pagamentos", payload);
+        String pagamentoId = jsonField(pagamentoResponse, "id");
+
+        mockMvc.perform(delete("/pagamentos/{id}", pagamentoId))
+                .andExpect(status().isNoContent());
+
+        Cobranca novaCobranca = new Cobranca();
+        novaCobranca.setValor(new BigDecimal("180.00"));
+        novaCobranca.setVencimento(LocalDate.of(2026, 6, 10));
+        novaCobranca.setStatus(StatusCobrancaEnum.ABERTA);
+        novaCobranca.setCompetencia("2026-06");
+        novaCobranca = cobrancaRepository.save(novaCobranca);
+
+        String payloadDuplicado = """
+                {
+                  "valor": 180.00,
+                  "dataPagamento": "2026-06-08",
+                  "forma": "PIX",
+                  "transactionId": "TXN-GLOBAL-001",
+                  "cobrancaId": "%s"
+                }
+                """.formatted(novaCobranca.getId());
+
+        mockMvc.perform(post("/pagamentos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payloadDuplicado))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Já existe pagamento com este transactionId"));
     }
 }

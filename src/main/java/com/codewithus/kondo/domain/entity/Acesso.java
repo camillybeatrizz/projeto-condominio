@@ -20,6 +20,14 @@ public class Acesso {
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;
 
+    @ManyToOne
+    @JoinColumn(name = "condominio_id")
+    private Condominio condominio;
+
+    @ManyToOne
+    @JoinColumn(name = "unidade_id")
+    private Unidade unidade;
+
     @Enumerated(EnumType.STRING)
     private PerfilEnum perfil;
 }

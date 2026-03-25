@@ -22,6 +22,8 @@ O projeto **Kondo** e uma API REST para **gestao de condominio**. Pelas classes 
 - contratos
 - contas bancarias
 
+Importante: o ERS do projeto descreve uma visao mais ampla do produto, com frontend web, integracoes externas e automacoes. Este guia, por outro lado, explica o que esta refletido no backend atual deste repositorio.
+
 Exemplos reais do dominio:
 
 - A classe `Condominio` possui `nome`, `cnpj`, `telefone` e um `Endereco` relacionado.
@@ -31,6 +33,18 @@ Exemplos reais do dominio:
 - A classe `Pagamento` pertence a uma `Cobranca`.
 
 Ou seja, o sistema modela a estrutura de um condominio e tambem partes da gestao financeira e operacional.
+
+### Autenticacao no projeto atual
+
+No estado atual do backend:
+
+- nao existe login local com senha da aplicacao
+- a autenticacao e delegada a um provedor OIDC
+- o backend valida tokens JWT recebidos nas requisicoes
+- o identificador principal do usuario autenticado e o `externalId`, normalmente vinculado ao `sub` do token
+- o `email` continua importante para contato e exibicao, mas nao deve substituir o `externalId` como referencia principal de identidade
+
+Isso e importante porque o projeto passou por uma evolucao de seguranca: a aplicacao deixou de depender de autenticacao local e passou a operar como Resource Server.
 
 ### Arquitetura utilizada
 
@@ -43,6 +57,8 @@ O projeto usa uma arquitetura em camadas, muito comum em Spring Boot:
 - **dto**: define os dados de entrada e de saida da API.
 - **mapper**: converte DTO em entidade e entidade em DTO.
 - **exception**: trata erros de forma padronizada.
+
+Tambem ha componentes de seguranca e suporte ao escopo de acesso, como validacao de JWT, resolucao do usuario autenticado e restricao por condominio.
 
 Na pratica, o fluxo segue este padrao:
 

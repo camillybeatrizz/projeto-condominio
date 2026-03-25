@@ -12,7 +12,7 @@ public class UsuarioMapper {
         Usuario entity = new Usuario();
         entity.setNome(dto.nome());
         entity.setEmail(dto.email());
-        entity.setSenha(dto.senha());
+        entity.setExternalId(dto.externalId());
         entity.setTelefone(dto.telefone());
         entity.setAtivo(dto.ativo());
         return entity;
@@ -21,7 +21,7 @@ public class UsuarioMapper {
     public void updateEntity(Usuario entity, UsuarioRequestDTO dto) {
         entity.setNome(dto.nome());
         entity.setEmail(dto.email());
-        entity.setSenha(dto.senha());
+        entity.setExternalId(dto.externalId());
         entity.setTelefone(dto.telefone());
         entity.setAtivo(dto.ativo());
     }
@@ -31,6 +31,7 @@ public class UsuarioMapper {
                 entity.getId(),
                 entity.getNome(),
                 entity.getEmail(),
+                entity.getExternalId(),
                 entity.getTelefone(),
                 entity.getAtivo(),
                 entity.getCreatedAt(),

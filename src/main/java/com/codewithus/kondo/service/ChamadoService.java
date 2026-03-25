@@ -2,8 +2,10 @@ package com.codewithus.kondo.service;
 
 import com.codewithus.kondo.dto.chamado.ChamadoRequestDTO;
 import com.codewithus.kondo.dto.chamado.ChamadoResponseDTO;
+import com.codewithus.kondo.domain.enums.StatusChamadoEnum;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface ChamadoService {
@@ -12,7 +14,7 @@ public interface ChamadoService {
 
     ChamadoResponseDTO buscarPorId(UUID id);
 
-    List<ChamadoResponseDTO> listar();
+    Page<ChamadoResponseDTO> listar(UUID condominioId, StatusChamadoEnum status, Pageable pageable);
 
     ChamadoResponseDTO atualizar(UUID id, ChamadoRequestDTO dto);
 

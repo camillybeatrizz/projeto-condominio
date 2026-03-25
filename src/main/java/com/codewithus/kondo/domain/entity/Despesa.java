@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -26,6 +27,12 @@ public class Despesa {
 
     @Enumerated(EnumType.STRING)
     private CategoriaDespesaEnum categoria;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by")
+    private String deletedBy;
 
     @ManyToOne
     @JoinColumn(name = "condominio_id")

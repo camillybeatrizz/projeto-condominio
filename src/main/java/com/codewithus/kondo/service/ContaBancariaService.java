@@ -2,8 +2,10 @@ package com.codewithus.kondo.service;
 
 import com.codewithus.kondo.dto.contabancaria.ContaBancariaRequestDTO;
 import com.codewithus.kondo.dto.contabancaria.ContaBancariaResponseDTO;
+import com.codewithus.kondo.domain.enums.TipoContaEnum;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface ContaBancariaService {
@@ -12,7 +14,7 @@ public interface ContaBancariaService {
 
     ContaBancariaResponseDTO buscarPorId(UUID id);
 
-    List<ContaBancariaResponseDTO> listar();
+    Page<ContaBancariaResponseDTO> listar(UUID condominioId, TipoContaEnum tipo, String banco, Pageable pageable);
 
     ContaBancariaResponseDTO atualizar(UUID id, ContaBancariaRequestDTO dto);
 

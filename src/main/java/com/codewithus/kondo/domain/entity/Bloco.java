@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -20,4 +21,7 @@ public class Bloco {
     @ManyToOne
     @JoinColumn(name = "condominio_id")
     private Condominio condominio;
+
+    private LocalDateTime deletedAt;
+    private String deletedBy;
 }

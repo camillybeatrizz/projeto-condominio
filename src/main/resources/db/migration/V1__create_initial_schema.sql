@@ -55,7 +55,9 @@ create table unidade (
     andar varchar(255),
     tipo varchar(255),
     bloco_id uuid,
-    constraint fk_unidade_bloco foreign key (bloco_id) references bloco(id)
+    morador_id uuid,
+    constraint fk_unidade_bloco foreign key (bloco_id) references bloco(id),
+    constraint fk_unidade_morador foreign key (morador_id) references usuario(id)
 );
 
 create table acesso (

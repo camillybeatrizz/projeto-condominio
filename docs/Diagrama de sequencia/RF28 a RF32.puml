@@ -1,0 +1,60 @@
+@startuml
+title Kondo - Diagrama de Sequência - Assistente Financeiro do Síndico (RF28 a RF32)
+
+actor Sindico
+participant "Frontend React / Chat Assistente" as Frontend
+participant "Backend API" as Backend
+participant "AssistenteFinanceiroService" as Assistente
+participant "RelatorioFinanceiroService" as Relatorio
+participant "DespesaService" as DespesaService
+participant "CobrancaService" as CobrancaService
+database "PostgreSQL" as DB
+
+== RF28 Consulta de Saldo Atual ==
+Sindico -> Frontend: consultar saldo atual
+Frontend -> Backend: GET /assistente/saldo-atual
+Backend -> Assistente: calcularSaldoAtual(condominio)
+Assistente -> Relatorio: obter receitas confirmadas
+Assistente -> DespesaService: obter despesas registradas
+Relatorio -> DB: select receitas
+DespesaService -> DB: select despesas
+Assistente --> Backend: saldo atualizado
+Backend --> Frontend: saldo atual
+
+== RF29 Projeção de Impacto Financeiro ==
+Sindico -> Frontend: simular despesa de X
+Frontend -> Backend: POST /assistente/projecao-impacto
+Backend -> Assistente: projetarImpacto(valorDespesa)
+Assistente -> DB: ler saldo atual e previsões
+Assistente --> Backend: saldo projetado pós-despesa
+Backend --> Frontend: resultado
+
+== RF30 Análise de Inadimplência ==
+Sindico -> Frontend: consultar inadimplência
+Frontend -> Backend: GET /assistente/inadimplencia
+Backend -> Assistente: calcularInadimplencia()
+Assistente -> CobrancaService: listar vencidas não pagas
+CobrancaService -> DB: select cobranças vencidas
+Assistente --> Backend: percentual e valor total
+Backend --> Frontend: análise de inadimplência
+
+== RF31 Avaliação de Desvio Orçamentário ==
+Sindico -> Frontend: comparar previsto x realizado
+Frontend -> Backend: GET /assistente/desvio-orcamentario
+Backend -> Assistente: avaliarDesvio()
+Assistente -> DB: ler orçamento previsto
+Assistente -> DB: ler despesas realizadas
+Assistente --> Backend: diferença percentual
+Backend --> Frontend: desvio orçamentário
+
+== RF32 Simulação de Decisão Financeira ==
+Sindico -> Frontend: "posso aprovar essa despesa?"
+Frontend -> Backend: POST /assistente/simulacao-decisao
+Backend -> Assistente: simularCenario(valor, impacto, inadimplencia)
+Assistente -> DB: ler saldo atual
+Assistente -> DB: ler despesas previstas
+Assistente -> DB: ler inadimplência média
+Assistente --> Backend: cenário com impacto em caixa e inadimplência
+Backend --> Frontend: recomendação/cenário
+
+@enduml

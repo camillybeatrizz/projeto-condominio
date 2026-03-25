@@ -1,0 +1,109 @@
+@startuml
+title Kondo - Diagrama de Sequência - Financeiro Operacional (RF13 a RF22)
+
+actor Sindico
+actor Morador
+participant "Frontend React" as Frontend
+participant "Backend API" as Backend
+participant "CobrancaService" as CobrancaService
+participant "PagamentoService" as PagamentoService
+participant "Gateway/Banco" as Gateway
+participant "WebhookController" as Webhook
+participant "NotificacaoService" as Notificacao
+participant "RelatorioFinanceiroService" as Financeiro
+participant "Scheduler" as Scheduler
+database "PostgreSQL" as DB
+
+== RF13 Geração de Taxas Condominiais ==
+Sindico -> Frontend: solicitar geração mensal por competência
+Frontend -> Backend: POST /cobrancas/gerar-lote
+Backend -> CobrancaService: gerarPorCompetencia(condominio, competencia)
+CobrancaService -> DB: listar unidades do condomínio
+loop para cada unidade
+    CobrancaService -> DB: criar cobrança pendente
+end
+CobrancaService --> Backend: lote gerado
+Backend --> Frontend: 201 + resumo
+
+== RF15 Emissão de Boleto/Pix ==
+CobrancaService -> Gateway: gerar boleto/QR Pix por cobrança
+Gateway --> CobrancaService: identificador único/documento
+CobrancaService -> DB: salvar linha digitável/qrCode/txid
+note right
+Cada cobrança deve ter
+documento financeiro único
+end note
+
+== RF14 Visualização de Cobranças ==
+Morador -> Frontend: consultar cobranças
+Frontend -> Backend: GET /cobrancas?periodo&status
+Backend -> CobrancaService: listar do morador autenticado
+CobrancaService -> DB: buscar por unidade/usuário/escopo
+Backend --> Frontend: lista de abertas, pagas e vencidas
+
+== RF19 Histórico Financeiro do Morador ==
+Morador -> Frontend: consultar histórico financeiro
+Frontend -> Backend: GET /financeiro/historico
+Backend -> CobrancaService: listar cobranças
+Backend -> PagamentoService: listar pagamentos
+CobrancaService -> DB: select por competência
+PagamentoService -> DB: select por data
+Backend --> Frontend: histórico consolidado e ordenado
+
+== RF17 Integração com Gateway / RF16 Registro Automático ==
+Gateway -> Webhook: POST confirmação de pagamento
+Webhook -> PagamentoService: processarWebhook(payload, assinatura)
+PagamentoService -> Gateway: validar assinatura/origem
+alt webhook inválido
+    PagamentoService --> Webhook: rejeitar
+    Webhook --> Gateway: HTTP 401
+else webhook válido
+    PagamentoService -> DB: verificar transactionId único
+    alt evento duplicado
+        PagamentoService --> Webhook: ignorar duplicidade
+        Webhook --> Gateway: HTTP 200 idempotente
+    else novo evento
+        PagamentoService -> DB: localizar cobrança
+        alt cobrança já paga
+            PagamentoService --> Webhook: conflito lógico/ignorar
+            Webhook --> Gateway: HTTP 200/409
+        else cobrança válida
+            group transação ACID
+                PagamentoService -> DB: inserir pagamento
+                PagamentoService -> DB: atualizar cobrança para PAGA
+            end
+            PagamentoService -> Notificacao: enviar confirmação ao morador
+            Notificacao --> PagamentoService: confirmado
+            Webhook --> Gateway: HTTP 200
+        end
+    end
+end
+
+== RF18 Controle de Inadimplência ==
+Sindico -> Frontend: consultar inadimplentes
+Frontend -> Backend: GET /inadimplencia
+Backend -> CobrancaService: listar vencidas não pagas
+CobrancaService -> DB: select cobranças vencidas
+Backend --> Frontend: unidades inadimplentes
+
+== RF20 Notificação de Vencimento ==
+Scheduler -> CobrancaService: buscar cobranças próximas do vencimento
+CobrancaService -> DB: select por regra X dias
+CobrancaService -> Notificacao: enviar lembrete
+Notificacao -> Morador: e-mail/WhatsApp de vencimento
+
+== RF21 Notificação de Pagamento Confirmado ==
+PagamentoService -> Notificacao: notificar pagamento confirmado
+Notificacao -> Morador: confirmação automática
+
+== RF22 Previsão de Fluxo de Caixa ==
+Sindico -> Frontend: consultar previsão de caixa
+Frontend -> Backend: GET /financeiro/previsao
+Backend -> Financeiro: projetarSaldoFuturo()
+Financeiro -> DB: ler receitas confirmadas
+Financeiro -> DB: ler despesas previstas
+Financeiro -> DB: ler média de inadimplência
+Financeiro --> Backend: projeção mensal
+Backend --> Frontend: saldo futuro projetado
+
+@enduml

@@ -2,8 +2,9 @@ package com.codewithus.kondo.service;
 
 import com.codewithus.kondo.dto.condominio.CondominioRequestDTO;
 import com.codewithus.kondo.dto.condominio.CondominioResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface CondominioService {
@@ -12,7 +13,7 @@ public interface CondominioService {
 
     CondominioResponseDTO buscarPorId(UUID id);
 
-    List<CondominioResponseDTO> listar();
+    Page<CondominioResponseDTO> listar(Pageable pageable);
 
     CondominioResponseDTO atualizar(UUID id, CondominioRequestDTO dto);
 

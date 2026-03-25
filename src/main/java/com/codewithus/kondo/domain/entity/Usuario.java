@@ -20,7 +20,12 @@ public class Usuario extends BaseEntity {
     @Column(unique = true)
     private String email;
 
-    private String senha;
+    @Column(name = "external_id", unique = true)
+    private String externalId;
+
+    @Column(name = "asaas_customer_id", unique = true)
+    private String asaasCustomerId;
+
     private String telefone;
     private Boolean ativo = true;
 }

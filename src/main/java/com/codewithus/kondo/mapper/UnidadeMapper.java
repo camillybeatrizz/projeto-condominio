@@ -2,6 +2,7 @@ package com.codewithus.kondo.mapper;
 
 import com.codewithus.kondo.domain.entity.Bloco;
 import com.codewithus.kondo.domain.entity.Unidade;
+import com.codewithus.kondo.domain.entity.Usuario;
 import com.codewithus.kondo.dto.unidade.UnidadeRequestDTO;
 import com.codewithus.kondo.dto.unidade.UnidadeResponseDTO;
 import org.springframework.stereotype.Component;
@@ -9,20 +10,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class UnidadeMapper {
 
-    public Unidade toEntity(UnidadeRequestDTO dto, Bloco bloco) {
+    public Unidade toEntity(UnidadeRequestDTO dto, Bloco bloco, Usuario morador) {
         Unidade entity = new Unidade();
         entity.setNumero(dto.numero());
         entity.setAndar(dto.andar());
         entity.setTipo(dto.tipo());
         entity.setBloco(bloco);
+        entity.setMorador(morador);
         return entity;
     }
 
-    public void updateEntity(Unidade entity, UnidadeRequestDTO dto, Bloco bloco) {
+    public void updateEntity(Unidade entity, UnidadeRequestDTO dto, Bloco bloco, Usuario morador) {
         entity.setNumero(dto.numero());
         entity.setAndar(dto.andar());
         entity.setTipo(dto.tipo());
         entity.setBloco(bloco);
+        entity.setMorador(morador);
     }
 
     public UnidadeResponseDTO toResponseDTO(Unidade entity) {
@@ -31,7 +34,8 @@ public class UnidadeMapper {
                 entity.getNumero(),
                 entity.getAndar(),
                 entity.getTipo(),
-                entity.getBloco() != null ? entity.getBloco().getId() : null
+                entity.getBloco() != null ? entity.getBloco().getId() : null,
+                entity.getMorador() != null ? entity.getMorador().getId() : null
         );
     }
 }

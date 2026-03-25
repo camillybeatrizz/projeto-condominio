@@ -1,0 +1,101 @@
+@startuml
+title Kondo - Diagrama de Sequência - Gestão de Manutenção e Contratos (RF38 a RF44)
+
+actor Sindico
+actor Morador
+participant "Frontend React / WhatsApp" as Frontend
+participant "Backend API" as Backend
+participant "ContratoService" as ContratoService
+participant "FornecedorService" as FornecedorService
+participant "GarantiaService" as GarantiaService
+participant "ServicoRecorrenteService" as ServicoRecService
+participant "OrcamentoService" as OrcamentoService
+participant "AlertaService" as AlertaService
+participant "ChamadoService" as ChamadoService
+participant "Scheduler" as Scheduler
+database "PostgreSQL" as DB
+
+== RF38 Cadastro de Contratos ==
+Sindico -> Frontend: cadastrar contrato
+Frontend -> Backend: POST /contratos
+Backend -> ContratoService: salvar(contrato)
+ContratoService -> FornecedorService: validar fornecedor
+FornecedorService -> DB: select fornecedor
+ContratoService -> DB: validar condomínio
+ContratoService -> DB: validar data início/fim
+ContratoService -> DB: verificar sobreposição de vigência
+alt inválido
+    Backend --> Frontend: 400/409
+else válido
+    ContratoService -> DB: insert contrato
+    Backend --> Frontend: 201
+end
+
+== RF39 Controle de Garantias ==
+Sindico -> Frontend: registrar garantia
+Frontend -> Backend: POST /garantias
+Backend -> GarantiaService: salvar(garantia)
+GarantiaService -> DB: insert garantia com validade
+Backend --> Frontend: 201
+
+== RF40 Registro de Serviços Recorrentes ==
+Sindico -> Frontend: cadastrar serviço recorrente
+Frontend -> Backend: POST /servicos-recorrentes
+Backend -> ServicoRecService: salvar(serviço, periodicidade)
+ServicoRecService -> DB: insert serviço recorrente
+Backend --> Frontend: 201
+
+== RF41 Histórico de Fornecedor ==
+Sindico -> Frontend: consultar histórico do fornecedor
+Frontend -> Backend: GET /fornecedores/{id}/historico
+Backend -> FornecedorService: obterHistorico(id)
+FornecedorService -> DB: listar contratos/serviços/chamados associados
+Backend --> Frontend: histórico consultável
+
+== RF42 Comparação de Orçamentos ==
+Sindico -> Frontend: registrar/comparar orçamentos
+Frontend -> Backend: POST /orcamentos e GET /orcamentos/comparacao
+Backend -> OrcamentoService: salvar e comparar
+OrcamentoService -> DB: inserir múltiplos orçamentos
+OrcamentoService -> DB: consultar valores lado a lado
+Backend --> Frontend: comparação de orçamentos
+
+== RF43 Alertas de Vencimento ==
+Scheduler -> ContratoService: buscar contratos e seguros próximos do vencimento
+ContratoService -> DB: select por antecedência configurável
+ContratoService -> AlertaService: gerar alertas
+AlertaService --> Sindico: aviso de vencimento
+
+== RF44 Gestão de Chamados ==
+Morador -> Frontend: abrir/acompanhar chamado
+Frontend -> Backend: POST/GET /chamados
+Backend -> ChamadoService: criar ou consultar
+alt criação
+    ChamadoService -> DB: validar unidade
+    ChamadoService -> DB: criar status ABERTO
+    Backend --> Frontend: chamado aberto
+else consulta
+    ChamadoService -> DB: buscar por escopo
+    Backend --> Frontend: status atual
+end
+
+Sindico -> Frontend: atualizar status do chamado
+Frontend -> Backend: PATCH /chamados/{id}/status
+Backend -> ChamadoService: atualizarStatus(id, novoStatus)
+ChamadoService -> DB: buscar chamado
+alt transição inválida
+    note right
+    Permitido:
+    ABERTO -> ANDAMENTO
+    ABERTO -> CONCLUIDO
+    ANDAMENTO -> CONCLUIDO
+    Não pode reabrir concluído
+    end note
+    Backend --> Frontend: 400
+else transição válida
+    ChamadoService -> DB: atualizar status
+    ChamadoService -> DB: registrar histórico
+    Backend --> Frontend: 200
+end
+
+@enduml
