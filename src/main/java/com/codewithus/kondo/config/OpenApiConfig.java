@@ -10,17 +10,26 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+//Esse arquivo monta a configuração global do Swagger/OpenAPI da aplicação.
+
 @Configuration
 public class OpenApiConfig {
 
+    // Cria um bean OpenAPI que o SpringDoc/Swagger vai usar para montar a documentação da API
     @Bean
     public OpenAPI kondoOpenAPI() {
+
+        // Nome interno do esquema de segurança
+        // Esse nome será usado para ligar a autenticação aos endpoints documentados
         final String securitySchemeName = "bearerAuth";
 
         return new OpenAPI()
+
+                // Define as informações gerais da API
                 .info(new Info()
-                        .title("Kondo API")
-                        .version("v1")
+                        .title("Kondo API") // Título exibido no Swagger
+                        .version("v1")  //versão da API/documentação
+                        // Descrição geral da API
                         .description("""
                                 API REST para gestao condominial do projeto Kondo.
 
@@ -53,13 +62,26 @@ public class OpenApiConfig {
                                 .name("Equipe Kondo"))
                         .license(new License()
                                 .name("Uso academico e demonstrativo")))
+
+                // Diz para a documentação que a API usa esse esquema de segurança por padrão
+                // Isso faz o Swagger entender que os endpoints exigem autenticação
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
-                .components(new Components()
+                .components(new Components()    // Define componentes reutilizáveis da documentação
+
+                        // Registra um esquema de segurança chamado bearerAuth
                         .addSecuritySchemes(securitySchemeName, new SecurityScheme()
-                                .name(securitySchemeName)
+                                .name(securitySchemeName)   // Nome interno do esquema
+
+                                // Tipo HTTP → usado para autenticação por cabeçalho HTTP
                                 .type(SecurityScheme.Type.HTTP)
+
+                                // Scheme "bearer" → indica uso do header Authorization: Bearer <token>
                                 .scheme("bearer")
+
+                                // Formato do token
                                 .bearerFormat("JWT")
+
+                                // Descrição exibida no Swagger para orientar o uso
                                 .description("""
                                         Autenticacao por token Bearer JWT.
 

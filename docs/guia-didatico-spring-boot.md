@@ -1,705 +1,673 @@
-# Guia Didatico do Projeto Kondo
+# Guia Didatico do Backend Kondo
 
-Este documento explica o projeto de forma simples, pensando em quem esta vendo Spring Boot pela primeira vez. Todos os exemplos citados foram tirados do codigo real do projeto.
+Este documento explica como o backend do Kondo funciona hoje no codigo. A ideia e ajudar quem esta aprendendo Spring Boot a entender nao apenas o que foi implementado, mas por que a aplicacao foi organizada dessa forma.
 
-## 1. Visao geral do projeto
+## 1. Visao geral
 
-### Objetivo do sistema
+O Kondo e uma API REST para gestao condominial. No MVP atual, o backend cobre principalmente:
 
-O projeto **Kondo** e uma API REST para **gestao de condominio**. Pelas classes e endpoints existentes, o sistema permite cadastrar e consultar informacoes como:
+- autenticacao federada via OIDC e validacao de JWT
+- gestao estrutural de condominios, blocos, unidades e areas comuns
+- cadastro de usuarios e acessos
+- ciclo financeiro de cobrancas e pagamentos
+- integracao com o gateway Asaas
+- processamento seguro de webhook
+- auditoria basica e trilha de eventos
 
-- enderecos
-- condominios
-- blocos
-- unidades
-- usuarios
-- acessos
-- chamados
-- cobrancas
-- pagamentos
-- despesas
-- fornecedores
-- contratos
-- contas bancarias
+Esse backend nao implementa login local com senha. A autenticacao vem de um provedor externo, como Keycloak ou Pinniped, e o backend atua como Resource Server.
 
-Importante: o ERS do projeto descreve uma visao mais ampla do produto, com frontend web, integracoes externas e automacoes. Este guia, por outro lado, explica o que esta refletido no backend atual deste repositorio.
+## 2. Arquitetura em camadas
 
-Exemplos reais do dominio:
+O projeto segue uma arquitetura em camadas porque isso deixa o codigo mais simples de manter, testar e evoluir.
 
-- A classe `Condominio` possui `nome`, `cnpj`, `telefone` e um `Endereco` relacionado.
-- A classe `Bloco` pertence a um `Condominio`.
-- A classe `Unidade` pertence a um `Bloco`.
-- A classe `Cobranca` pertence a uma `Unidade`.
-- A classe `Pagamento` pertence a uma `Cobranca`.
+### 2.1 Organizacao dos pacotes
 
-Ou seja, o sistema modela a estrutura de um condominio e tambem partes da gestao financeira e operacional.
+- `controller`: recebe requisicoes HTTP, valida entrada e devolve JSON
+- `service`: define contratos de negocio
+- `service/impl`: implementa as regras de negocio e a orquestracao
+- `repository`: acesso a dados com Spring Data JPA
+- `repository/specification`: filtros dinamicos para listagens e escopo
+- `domain/entity`: entidades JPA e relacionamentos do banco
+- `domain/enums`: enumeracoes do dominio, como perfis e status
+- `dto`: objetos de entrada e saida da API
+- `mapper`: conversao entre DTOs e entidades
+- `security`: autenticacao, autorizacao, ownership e resolucao do usuario atual
+- `config`: configuracoes de beans, seguranca, OpenAPI e Flyway
+- `exception`: excecoes de negocio e tratamento global de erro
 
-### Autenticacao no projeto atual
+### 2.2 Responsabilidade de cada camada
 
-No estado atual do backend:
+O fluxo padrao do projeto e:
 
-- nao existe login local com senha da aplicacao
-- a autenticacao e delegada a um provedor OIDC
-- o backend valida tokens JWT recebidos nas requisicoes
-- o identificador principal do usuario autenticado e o `externalId`, normalmente vinculado ao `sub` do token
-- o `email` continua importante para contato e exibicao, mas nao deve substituir o `externalId` como referencia principal de identidade
+`HTTP -> Controller -> Service -> Repository -> Banco -> Service -> Controller -> JSON`
 
-Isso e importante porque o projeto passou por uma evolucao de seguranca: a aplicacao deixou de depender de autenticacao local e passou a operar como Resource Server.
+Exemplo real com cobranca:
 
-### Arquitetura utilizada
+1. `CobrancaController` recebe `POST /cobrancas`
+2. o DTO entra validado com `@Valid`
+3. `CobrancaServiceImpl` aplica regras de negocio
+4. `UnidadeRepository` e `CobrancaRepository` consultam e persistem dados
+5. `AsaasCobrancaGateway` integra com o Asaas quando necessario
+6. o service devolve um `CobrancaResponseDTO`
+7. o controller retorna `201 Created`
 
-O projeto usa uma arquitetura em camadas, muito comum em Spring Boot:
+Essa separacao existe por um motivo importante:
 
-- **controller**: recebe as requisicoes HTTP.
-- **service**: concentra a regra de negocio e a orquestracao.
-- **repository**: conversa com o banco via Spring Data JPA.
-- **domain/entity**: representa as tabelas e relacionamentos do banco.
-- **dto**: define os dados de entrada e de saida da API.
-- **mapper**: converte DTO em entidade e entidade em DTO.
-- **exception**: trata erros de forma padronizada.
+- controller nao deve carregar regra de negocio
+- service nao deve conhecer detalhes de HTTP
+- repository nao deve decidir regra funcional
 
-Tambem ha componentes de seguranca e suporte ao escopo de acesso, como validacao de JWT, resolucao do usuario autenticado e restricao por condominio.
+## 3. Como o Spring Boot estrutura a aplicacao
 
-Na pratica, o fluxo segue este padrao:
+## 3.1 Ponto de entrada
 
-`Requisicao HTTP -> Controller -> Service -> Repository -> Banco -> Service -> Controller -> Resposta JSON`
+A classe `KondoApplication` usa `@SpringBootApplication`. Essa anotacao junta tres ideias importantes:
 
-Esse padrao deixa o projeto organizado, porque cada camada tem uma responsabilidade bem definida.
+- `@Configuration`: a classe pode registrar configuracoes
+- `@EnableAutoConfiguration`: o Spring Boot monta muita coisa automaticamente
+- `@ComponentScan`: o Spring procura componentes no pacote `com.codewithus.kondo` e nos subpacotes
 
-## 2. Explicacao por package
+Na pratica, quando a aplicacao sobe, o Spring:
 
-### controller
+1. le o `pom.xml` e as dependencias
+2. cria o contexto de aplicacao
+3. encontra classes anotadas com `@Component`, `@Service`, `@Repository`, `@Controller`, `@Configuration`
+4. cria os beans necessarios
+5. injeta as dependencias automaticamente
+6. sobe o servidor web e publica os endpoints REST
 
-#### Responsabilidade
+## 3.2 IoC e injecao de dependencia
 
-O package `controller` expõe os endpoints da API. Ele e a "porta de entrada" do sistema.
+### O que e IoC
 
-Exemplo real em `src/main/java/com/codewithus/kondo/controller/CondominioController.java`:
+Inversao de Controle significa que os objetos nao sao criados manualmente com `new` pela maior parte da aplicacao. Quem controla isso e o Spring.
 
-```java
-@RestController
-@RequestMapping("/condominios")
-@RequiredArgsConstructor
-public class CondominioController {
-
-    private final CondominioService service;
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public CondominioResponseDTO criar(@Valid @RequestBody CondominioRequestDTO dto) {
-        return service.salvar(dto);
-    }
-}
-```
-
-Aqui o controller:
-
-- recebe a chamada HTTP
-- pega os dados enviados no corpo da requisicao
-- valida esses dados com `@Valid`
-- chama o service
-- devolve a resposta para o cliente
-
-#### Principais anotacoes
-
-- `@RestController`: diz ao Spring que a classe e um controller REST e que os retornos serao enviados como JSON.
-- `@RequestMapping("/condominios")`: define a rota base do controller.
-- `@PostMapping`, `@GetMapping`, `@PutMapping`, `@DeleteMapping`: definem qual metodo HTTP sera atendido.
-- `@RequestBody`: diz que o parametro vem do corpo da requisicao.
-- `@PathVariable`: pega valores da URL, como o `id`.
-- `@ResponseStatus`: define o status HTTP retornado.
-- `@Valid`: dispara as validacoes do DTO.
-
-#### Fluxo das requisicoes
-
-Usando `CondominioController` como exemplo:
-
-1. O cliente faz `POST /condominios`.
-2. O metodo `criar(...)` recebe um `CondominioRequestDTO`.
-3. O Spring valida o DTO por causa do `@Valid`.
-4. O controller chama `service.salvar(dto)`.
-5. O service processa os dados e salva no banco.
-6. O controller devolve um `CondominioResponseDTO`.
-
-O mesmo padrao aparece em outros controllers, como:
-
-- `PagamentoController`
-- `CobrancaController`
-- `UsuarioController`
-- `BlocoController`
-
-Isso mostra que o projeto segue um padrao consistente de CRUD.
-
-### service
-
-#### Papel na regra de negocio
-
-O package `service` e onde fica a regra de negocio. Ele nao recebe HTTP diretamente e nao acessa o banco "na mao". Em vez disso, ele:
-
-- valida a existencia de dados relacionados
-- decide o que deve ser salvo
-- usa mapper para montar entidades
-- usa repository para persistir
-- lanca excecoes quando algo nao existe
-
-Exemplo real em `src/main/java/com/codewithus/kondo/service/impl/CondominioServiceImpl.java`:
-
-```java
-public CondominioResponseDTO salvar(CondominioRequestDTO dto) {
-    Endereco endereco = buscarEndereco(dto.enderecoId());
-    Condominio entity = mapper.toEntity(dto, endereco);
-    return mapper.toResponseDTO(condominioRepository.save(entity));
-}
-```
-
-Esse metodo mostra bem a regra:
-
-1. primeiro busca o `Endereco` pelo `enderecoId`
-2. depois monta a entidade `Condominio`
-3. salva no repository
-4. converte a entidade salva em DTO de resposta
-
-#### Como se conecta ao controller
-
-O controller injeta a interface do service:
+Em vez de um controller criar seu proprio service, ele declara a dependencia:
 
 ```java
 private final CondominioService service;
 ```
 
-Depois chama metodos como:
+Como a classe usa `@RequiredArgsConstructor`, o Spring injeta esse bean automaticamente. Isso reduz acoplamento e facilita testes.
 
-- `service.salvar(dto)`
-- `service.listar()`
-- `service.buscarPorId(id)`
-- `service.atualizar(id, dto)`
-- `service.deletar(id)`
+### Por que isso foi usado no Kondo
 
-Ou seja: o controller delega o trabalho para o service.
+Esse projeto usa bastante injecao de dependencia porque ela ajuda a:
 
-#### Explicacao dos metodos principais
+- trocar implementacoes sem alterar controllers
+- centralizar configuracoes
+- isolar responsabilidades
+- testar fluxos com mais previsibilidade
 
-Quase todos os services possuem estes metodos:
+Exemplo: `CobrancaServiceImpl` depende de repository, mapper, seguranca e gateway externo. O service nao precisa saber como construir cada colaborador; o Spring entrega tudo pronto.
 
-- `salvar(...)`: cria um novo registro.
-- `buscarPorId(...)`: busca um registro especifico.
-- `listar()`: retorna todos os registros.
-- `atualizar(...)`: altera um registro existente.
-- `deletar(...)`: remove um registro.
+## 3.3 Configuracao de beans
 
-Exemplo real em `CobrancaServiceImpl`:
+O Spring cria beans de duas formas no projeto:
 
-```java
-private Unidade buscarUnidade(UUID id) {
-    return unidadeRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Unidade não encontrada"));
-}
-```
+### Beans criados por anotacao estereotipo
 
-Esse trecho mostra uma logica muito importante no projeto: antes de salvar uma cobranca, o sistema confirma se a `Unidade` realmente existe. Se nao existir, ele lanca uma excecao.
+- `@Service`: como `CondominioServiceImpl`, `CobrancaServiceImpl`, `AsaasWebhookServiceImpl`
+- `@Component`: como `JwtRoleConverter`, `CurrentUserResolver`, `AsaasWebhookSignatureVerifier`
+- `@Repository`: os repositories do Spring Data sao registrados automaticamente a partir das interfaces
 
-Outro exemplo em `PagamentoServiceImpl`:
+### Beans criados manualmente em `@Configuration`
 
-```java
-private Cobranca buscarCobranca(UUID id) {
-    return cobrancaRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Cobrança não encontrada"));
-}
-```
-
-Aqui o pagamento depende de uma cobranca existente. Isso mostra a ligacao entre as entidades do sistema.
-
-### domain/entity
-
-#### Estrutura das classes
-
-O package `domain/entity` representa as tabelas do banco. Cada classe e uma entidade JPA.
-
-Exemplo real em `src/main/java/com/codewithus/kondo/domain/entity/Condominio.java`:
-
-```java
-@Entity
-@Table(name = "condominio")
-@Getter @Setter
-public class Condominio {
-
-    @Id
-    @GeneratedValue
-    private UUID id;
-
-    private String nome;
-    private String cnpj;
-    private String telefone;
-
-    @ManyToOne
-    @JoinColumn(name = "endereco_id")
-    private Endereco endereco;
-}
-```
-
-Essa classe mostra:
-
-- o identificador `id`
-- campos simples como `nome` e `telefone`
-- um relacionamento com `Endereco`
-
-Outros exemplos importantes:
-
-- `Bloco` possui relacao com `Condominio`
-- `Unidade` possui relacao com `Bloco`
-- `Cobranca` possui relacao com `Unidade`
-- `Pagamento` possui relacao com `Cobranca`
-- `Despesa` possui relacao com `Condominio`
-- `Acesso` possui relacao com `Usuario`
-
-Isso forma uma cadeia bem clara do negocio.
-
-#### Uso de anotacoes JPA
-
-As anotacoes JPA dizem ao Spring e ao Hibernate como mapear as classes para o banco.
+O projeto faz isso quando precisa controlar melhor a instancia criada.
 
 Exemplos reais:
 
-- `@Entity`: marca a classe como entidade persistente.
-- `@Table(name = "condominio")`: define o nome da tabela.
-- `@Id`: marca o campo identificador.
-- `@GeneratedValue`: gera o ID automaticamente.
-- `@ManyToOne`: define relacionamento muitos-para-um.
-- `@JoinColumn(name = "endereco_id")`: define a coluna de chave estrangeira.
-- `@Enumerated(EnumType.STRING)`: grava enums como texto.
-- `@Column(unique = true)`: define restricao de unicidade.
+- `SecurityConfig.securedFilterChain(...)`: cria o `SecurityFilterChain`
+- `SecurityConfig.jwtDecoder(...)`: cria o `JwtDecoder` com validacao de issuer e audience
+- `OpenApiConfig.kondoOpenAPI()`: cria o bean da documentacao Swagger/OpenAPI
+- `FlywayConfig.flyway(...)`: cria o bean do Flyway e executa as migrations
 
-Exemplo em `Pagamento.java`:
+Isso foi feito dessa forma porque esses objetos nao sao so classes de dominio. Eles representam infraestrutura da aplicacao.
 
-```java
-@Column(unique = true)
-private String transactionId;
-```
+## 3.4 `@ConfigurationProperties`
 
-Isso indica que o `transactionId` nao pode se repetir.
+O projeto usa classes como:
 
-Exemplo em `Cobranca.java`:
+- `KondoSecurityProperties`
+- `AsaasIntegrationProperties`
+- `AsaasWebhookProperties`
 
-```java
-@Enumerated(EnumType.STRING)
-private StatusCobrancaEnum status;
-```
+Essas classes leem valores do `application.properties` e dos profiles. Isso foi escolhido para evitar strings soltas pelo codigo e deixar a configuracao centralizada.
 
-Aqui o status da cobranca e salvo como texto no banco, por exemplo algo como `PENDENTE` ou `PAGO`, dependendo dos valores do enum.
+Exemplo de configuracoes reais:
 
-### repository
+- `kondo.security.enabled`
+- `kondo.security.audiences`
+- `kondo.integrations.asaas.enabled`
+- `kondo.integrations.asaas.webhook.hmac-secret`
 
-#### Funcao
+## 3.5 Ciclo de requisicao no Spring Boot
 
-O package `repository` faz o acesso ao banco de dados. Em vez de escrever SQL manual para operacoes basicas, o projeto usa `JpaRepository`.
+No Kondo, o fluxo mais comum e:
 
-Exemplo real em `src/main/java/com/codewithus/kondo/repository/CondominioRepository.java`:
+1. o cliente envia uma requisicao HTTP
+2. o Spring Security filtra a chamada antes de chegar no controller
+3. se o acesso for permitido, o controller recebe a requisicao
+4. o controller converte JSON em DTO
+5. o service aplica regras de negocio
+6. o repository usa JPA para ler ou gravar no banco
+7. o service transforma a resposta em DTO
+8. o controller devolve JSON
+9. se algo falhar, `ApiExceptionHandler` padroniza o erro
 
-```java
-public interface CondominioRepository extends JpaRepository<Condominio, UUID> {
-}
-```
+## 3.6 Anotacoes principais usadas no projeto
 
-Mesmo sem escrever nenhum metodo, esse repository ja ganha varios recursos prontos, como:
+### Web e API
 
-- `save(...)`
-- `findById(...)`
-- `findAll()`
-- `delete(...)`
+- `@RestController`: expõe endpoints REST
+- `@RequestMapping`: define rota base
+- `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`: ligam metodos HTTP
+- `@RequestBody`: le o JSON do corpo
+- `@PathVariable`: le parametros da URL
+- `@RequestParam`: le filtros da query string
+- `@ResponseStatus`: define o status HTTP
+- `@Valid`: dispara validacao do DTO
 
-#### Relacao com JPA
+### Regra de negocio e infraestrutura
 
-O Spring Data JPA usa as entidades do package `domain/entity` para saber:
+- `@Service`: marca a camada de negocio
+- `@Component`: registra componentes auxiliares
+- `@Configuration`: registra classes de configuracao
+- `@Bean`: cria beans manualmente
+- `@ConfigurationProperties`: faz bind de propriedades
 
-- qual tabela consultar
-- quais colunas usar
-- quais relacionamentos existem
+### Persistencia
 
-Quando o service chama:
+- `@Entity`: marca entidades JPA
+- `@Table`: define a tabela
+- `@Id`, `@GeneratedValue`: identificador
+- `@ManyToOne`, `@JoinColumn`: relacionamentos
+- `@Enumerated(EnumType.STRING)`: persiste enums como texto
 
-```java
-condominioRepository.findById(id)
-```
+### Seguranca
 
-o Spring monta a consulta usando o mapeamento da entidade `Condominio`.
+- `@EnableMethodSecurity`: ativa autorizacao em nivel de metodo
+- `@PreAuthorize`: aplica RBAC e regras de ownership
 
-## 3. Anotacoes utilizadas no projeto
+### Transacao
 
-Nesta secao, cada anotacao e explicada com funcao, local de uso e exemplo real.
+- `@Transactional`: garante consistencia nas operacoes de negocio
 
-### `@SpringBootApplication`
+Isso e importante no financeiro. Em `PagamentoServiceImpl` e `AsaasWebhookServiceImpl`, pagamento e atualizacao da cobranca acontecem dentro de transacao para evitar estado incoerente.
 
-- Para que serve: marca a classe principal da aplicacao e ativa a configuracao automatica do Spring Boot.
-- Onde e usada: `KondoApplication`.
-- Exemplo do projeto: `src/main/java/com/codewithus/kondo/KondoApplication.java`.
+## 4. Persistencia e modelagem do dominio
 
-### `@RestController`
+As entidades ficam em `domain/entity`. Elas representam a estrutura do banco e os relacionamentos principais do negocio.
 
-- Para que serve: transforma a classe em controller REST e retorna JSON automaticamente.
-- Onde e usada: todos os controllers.
-- Exemplo do projeto: `CondominioController`, `PagamentoController`, `UsuarioController`.
+Exemplos centrais:
 
-### `@RequestMapping`
+- `Condominio` referencia `Endereco`
+- `Bloco` pertence a `Condominio`
+- `Unidade` pertence a `Bloco` e pode ter `morador`
+- `Cobranca` pertence a `Unidade`
+- `Pagamento` pertence a `Cobranca`
+- `Acesso` vincula `Usuario`, `Perfil`, `Condominio` e, quando faz sentido, `Unidade`
 
-- Para que serve: define a rota base de um controller.
-- Onde e usada: classes controller.
-- Exemplo do projeto: `@RequestMapping("/condominios")` em `CondominioController`.
+### BaseEntity
 
-### `@PostMapping`, `@GetMapping`, `@PutMapping`, `@DeleteMapping`
+As entidades principais herdam de `BaseEntity`, que concentra:
 
-- Para que serve: mapeiam os metodos HTTP.
-- Onde e usada: metodos dos controllers.
-- Exemplo do projeto: `@PostMapping` no metodo `criar(...)` de `CondominioController`.
+- `createdAt`
+- `updatedAt`
 
-### `@RequestBody`
+Isso foi feito para padronizar auditoria temporal sem repetir codigo.
 
-- Para que serve: informa que o dado vem no corpo da requisicao.
-- Onde e usada: metodos `criar(...)` e `atualizar(...)`.
-- Exemplo do projeto: `public CondominioResponseDTO criar(@Valid @RequestBody CondominioRequestDTO dto)`.
+### Soft delete
 
-### `@PathVariable`
+Entidades como `Condominio`, `Cobranca` e `Pagamento` usam:
 
-- Para que serve: captura valores da URL.
-- Onde e usada: metodos de busca, atualizacao e exclusao.
-- Exemplo do projeto: `buscar(@PathVariable UUID id)` em `CobrancaController`.
+- `deletedAt`
+- `deletedBy`
 
-### `@ResponseStatus`
+Em vez de apagar fisicamente, o sistema faz exclusao logica. Isso preserva historico, o que e especialmente importante em dados estruturais e financeiros.
 
-- Para que serve: define o status HTTP de resposta.
-- Onde e usada: principalmente em `POST` e `DELETE`.
-- Exemplo do projeto: `HttpStatus.CREATED` em `criar(...)` e `HttpStatus.NO_CONTENT` em `deletar(...)`.
+### Repositories e Specifications
 
-### `@Valid`
+Os repositories estendem `JpaRepository`, entao o Spring gera muita implementacao automaticamente.
 
-- Para que serve: ativa as validacoes declaradas no DTO.
-- Onde e usada: parametros dos controllers.
-- Exemplo do projeto: `@Valid @RequestBody CondominioRequestDTO dto`.
+Exemplos:
 
-### `@NotBlank`
+- `findByIdAndDeletedAtIsNull(...)`
+- `findAllByDeletedAtIsNull(...)`
+- `findByExternalId(...)`
 
-- Para que serve: exige texto nao vazio.
-- Onde e usada: DTOs de entrada.
-- Exemplo do projeto: `String nome` em `CondominioRequestDTO`.
+Quando a busca precisa ser dinamica, o projeto usa `Specification`, como em:
 
-### `@NotNull`
+- `CobrancaSpecifications`
+- `PagamentoSpecifications`
+- `ChamadoSpecifications`
 
-- Para que serve: exige valor obrigatorio.
-- Onde e usada: DTOs de entrada.
-- Exemplo do projeto: `UUID enderecoId` em `CondominioRequestDTO`.
+Isso foi escolhido porque os filtros variam conforme perfil, condominio, status e periodo.
 
-### `@Size`
+## 5. DTOs, mappers e tratamento de erro
 
-- Para que serve: limita o tamanho de um texto.
-- Onde e usada: DTOs de entrada.
-- Exemplo do projeto: `@Size(max = 120)` em `CondominioRequestDTO`.
+### DTOs
 
-### `@Positive`
+O projeto usa DTOs para separar:
 
-- Para que serve: exige numero positivo.
-- Onde e usada: DTOs financeiros.
-- Exemplo do projeto: `BigDecimal valor` em `CobrancaRequestDTO`.
+- o formato da API
+- o modelo de persistencia
 
-### `@Email`
+Isso evita expor entidades diretamente e deixa a API mais estavel.
 
-- Para que serve: valida formato de email.
-- Onde e usada: `UsuarioRequestDTO`.
-- Exemplo do projeto: campo de email do usuario.
+### Mappers
 
-### `@Service`
+Os mappers, como `CondominioMapper` e `CobrancaMapper`, convertem DTO para entidade e entidade para DTO.
 
-- Para que serve: marca a classe como componente de servico.
-- Onde e usada: classes `*ServiceImpl`.
-- Exemplo do projeto: `CondominioServiceImpl`.
+Essa escolha foi feita para:
 
-### `@Component`
+- evitar controller inchado
+- evitar logica de montagem espalhada
+- manter a camada de service focada em regra de negocio
 
-- Para que serve: registra um componente no Spring.
-- Onde e usada: classes mapper.
-- Exemplo do projeto: `CondominioMapper`, `CobrancaMapper`, `PagamentoMapper`.
+### Tratamento global de erro
 
-### `@RequiredArgsConstructor`
+`ApiExceptionHandler` usa `@RestControllerAdvice` para transformar excecoes em respostas padronizadas.
 
-- Para que serve: o Lombok gera um construtor com os atributos `final`.
-- Onde e usada: controllers e services.
-- Exemplo do projeto: `private final CondominioService service;` em `CondominioController`.
+Exemplos:
 
-### `@Entity`
+- `ResourceNotFoundException` -> `404`
+- `BusinessException` -> `400`
+- `ConflictException` -> `409`
+- `AccessDeniedException` -> `403`
 
-- Para que serve: marca uma classe como tabela do banco.
-- Onde e usada: classes do package `domain/entity`.
-- Exemplo do projeto: `Condominio`, `Cobranca`, `Pagamento`.
+Isso melhora a experiencia do frontend e deixa o comportamento previsivel.
 
-### `@Table`
+## 6. Seguranca da aplicacao
 
-- Para que serve: define o nome da tabela.
-- Onde e usada: entidades.
-- Exemplo do projeto: `@Table(name = "pagamento")` em `Pagamento`.
+## 6.1 Modelo adotado
 
-### `@Id`
+O backend usa Spring Security com `spring-boot-starter-oauth2-resource-server`.
 
-- Para que serve: identifica a chave primaria.
-- Onde e usada: entidades.
-- Exemplo do projeto: `private UUID id;` em praticamente todas as entidades.
+Isso significa que:
 
-### `@GeneratedValue`
+- o login acontece fora da API
+- o cliente envia um token JWT Bearer
+- o backend valida assinatura e claims do token
+- o backend decide autorizacao com base em roles e escopo
 
-- Para que serve: pede geracao automatica do identificador.
-- Onde e usada: entidades.
-- Exemplo do projeto: `Condominio`, `Usuario`, `Pagamento`.
+Hoje, o projeto esta preparado para OIDC com profiles como:
 
-### `@ManyToOne`
+- `application-keycloak.properties`
+- `application-pinniped.properties`
 
-- Para que serve: cria relacionamento muitos-para-um.
-- Onde e usada: entidades relacionadas.
-- Exemplo do projeto: muitos `Bloco` podem apontar para um `Condominio`.
+Entao o sistema e compativel com Keycloak, mas nao depende de uma implementacao exclusiva dele.
 
-### `@JoinColumn`
+## 6.2 `SecurityConfig`
 
-- Para que serve: define a coluna da chave estrangeira.
-- Onde e usada: relacionamentos.
-- Exemplo do projeto: `@JoinColumn(name = "condominio_id")` em `Bloco`.
+`SecurityConfig` define duas cadeias de seguranca.
 
-### `@Enumerated(EnumType.STRING)`
+### Quando a seguranca esta habilitada
 
-- Para que serve: persiste enums como texto.
-- Onde e usada: entidades com enums.
-- Exemplo do projeto: `status` em `Cobranca`, `forma` em `Pagamento`, `perfil` em `Acesso`.
+Com `kondo.security.enabled=true`, o bean `securedFilterChain`:
 
-### `@Column(unique = true)`
+- desabilita CSRF, o que faz sentido em API stateless com JWT
+- libera apenas endpoints publicos, como `/actuator/health`, Swagger e `/webhooks/asaas`
+- exige autenticacao para o resto
+- configura o Resource Server para usar JWT
+- usa `JwtRoleConverter` para transformar claims em authorities do Spring
 
-- Para que serve: cria uma restricao de unicidade.
-- Onde e usada: alguns campos especificos.
-- Exemplo do projeto: `email` em `Usuario` e `transactionId` em `Pagamento`.
+### Quando a seguranca esta desabilitada
 
-### `@CreationTimestamp`
+Com `kondo.security.enabled=false`, o bean `openFilterChain` entra em acao.
 
-- Para que serve: preenche automaticamente a data de criacao.
-- Onde e usada: `Endereco` e `Condominio`.
-- Exemplo do projeto: `private LocalDateTime createdAt;`.
+Existem dois comportamentos:
 
-### `@UpdateTimestamp`
+- se `allowInsecureOpenAccess=false`, a aplicacao falha fechada e bloqueia tudo, exceto infraestrutura minima
+- se `allowInsecureOpenAccess=true`, a API fica aberta para estudo e desenvolvimento local
 
-- Para que serve: atualiza automaticamente a data da ultima alteracao.
-- Onde e usada: `Condominio`.
-- Exemplo do projeto: `private LocalDateTime updateAt;`.
+Isso foi uma decisao importante do projeto: fora do profile local, o padrao e seguro por default.
 
-### `@RestControllerAdvice`
+## 6.3 Validacao de JWT
 
-- Para que serve: tratamento global de excecoes da API.
-- Onde e usada: `ApiExceptionHandler`.
-- Exemplo do projeto: captura `ResourceNotFoundException` e devolve `404`.
+O `JwtDecoder` criado em `SecurityConfig` valida:
 
-### `@ExceptionHandler`
+- `issuer`: quem emitiu o token
+- `audience`: para qual aplicacao o token foi emitido
 
-- Para que serve: diz qual metodo trata determinada excecao.
-- Onde e usada: `ApiExceptionHandler`.
-- Exemplo do projeto: `handleNotFound(...)` trata `ResourceNotFoundException`.
+Se o token nao tiver a audience esperada, ele e rejeitado.
 
-## 4. Fluxo completo do sistema
+Isso alinha o backend com os requisitos RF01, RF02, RNF02 e RNF03.
 
-Vamos usar uma requisicao real para explicar o fluxo: **criar um condominio**.
+## 6.4 Conversao de roles
 
-### Passo 1. O cliente envia a requisicao
+`JwtRoleConverter` extrai roles de varias partes do token:
 
-Exemplo:
+- `realm_access.roles`
+- `resource_access.{clientId}.roles`
+- `roles`
+- `groups`
 
-```http
-POST /condominios
-Content-Type: application/json
+Depois converte para authorities do Spring, como:
 
-{
-  "nome": "Condominio Jardim Azul",
-  "cnpj": "12.345.678/0001-99",
-  "telefone": "(11) 99999-9999",
-  "enderecoId": "uuid-do-endereco"
-}
-```
+- `ROLE_ADMIN`
+- `ROLE_SINDICO`
+- `ROLE_MORADOR`
 
-Esse JSON segue o formato de `CondominioRequestDTO`.
+Esse desenho foi adotado para suportar diferentes formatos de token entre provedores OIDC e ambientes.
 
-### Passo 2. O controller recebe e valida
+## 6.5 Identidade do usuario local
 
-No `CondominioController`, o metodo abaixo recebe a requisicao:
+O backend trabalha com duas ideias diferentes:
 
-```java
-public CondominioResponseDTO criar(@Valid @RequestBody CondominioRequestDTO dto)
-```
+- identidade autenticada no token
+- registro local do usuario na base
 
-O que acontece aqui:
+O elo principal entre as duas e `usuario.externalId`, normalmente ligado ao `sub` do token.
 
-- `@RequestBody` converte o JSON em objeto Java
-- `@Valid` executa as validacoes do DTO
-- se faltar `nome` ou `enderecoId`, por exemplo, o Spring interrompe o fluxo e gera erro
+O fluxo e implementado por `CurrentUserResolver`:
 
-### Passo 3. O controller chama o service
+1. pega o `subject` e o `email` do token
+2. tenta localizar `Usuario` por `externalId`
+3. se nao achar e `strictExternalIdentity=false`, pode fazer fallback por email
+4. se o usuario local ainda nao tiver `externalId`, `UsuarioIdentityLinkService` vincula esse `subject`
 
-O controller executa:
+Esse comportamento existe para permitir migracao segura de usuarios ja cadastrados no banco antes da identidade federada estar totalmente consolidada.
 
-```java
-return service.salvar(dto);
-```
+As migrations `V3__drop_usuario_senha.sql` e `V4__add_usuario_external_id.sql` mostram bem essa mudanca de estrategia:
 
-Ele nao sabe como salvar. Ele apenas repassa para a camada de negocio.
+- senha local foi removida
+- `external_id` passou a existir como identificador federado unico
 
-### Passo 4. O service busca dependencias necessarias
+## 6.6 RBAC e escopo por condominio
 
-Em `CondominioServiceImpl`, o primeiro passo e:
+O controle de acesso nao depende so de role. O projeto combina duas camadas:
 
-```java
-Endereco endereco = buscarEndereco(dto.enderecoId());
-```
+### RBAC por perfil
 
-Isso significa: antes de criar o condominio, o sistema confere se o endereco informado existe.
+Nos controllers, `@PreAuthorize` define quem pode chamar cada endpoint.
 
-### Passo 5. O repository consulta o banco
+Exemplos:
 
-Dentro de `buscarEndereco(...)`, o service chama:
+- `POST /condominios`: `ADMIN` e `SINDICO`
+- `GET /meu-contexto`: `ADMIN`, `SINDICO`, `MORADOR`
+- `GET /pagamentos/{id}`: `ADMIN`, `SINDICO` ou dono do recurso
 
-```java
-enderecoRepository.findById(id)
-```
+### Escopo por condominio e ownership
 
-Se o endereco nao existir:
+Mesmo quando a role permite o endpoint, o service ainda pode restringir o dado acessado.
 
-```java
-orElseThrow(() -> new ResourceNotFoundException("Endereco não encontrado"));
-```
+Componentes centrais:
 
-Entao o sistema para e devolve erro.
+- `CondominioScopeService`
+- `ResourceOwnershipService`
 
-### Passo 6. O mapper monta a entidade
+Na pratica:
 
-Se o endereco existir, o service chama:
+- `ADMIN` tem acesso global
+- `SINDICO` acessa apenas os condominios aos quais esta vinculado
+- `MORADOR` ve apenas o que pertence a sua unidade ou ao seu contexto
 
-```java
-Condominio entity = mapper.toEntity(dto, endereco);
-```
+Isso atende RF04, RF05, RNF08 e RNF17.
 
-O mapper copia os dados do DTO para a entidade:
+## 6.7 Seguranca do webhook
 
-- `nome`
-- `cnpj`
-- `telefone`
-- `endereco`
+O endpoint `/webhooks/asaas` fica liberado no filtro HTTP porque o Asaas nao envia JWT do usuario. Mesmo assim, ele nao esta "sem seguranca".
 
-### Passo 7. O repository salva
+`AsaasWebhookController` protege o endpoint de duas formas:
 
-Depois disso:
+- modo legado por `asaas-access-token`
+- modo recomendado por assinatura HMAC e timestamp
 
-```java
-condominioRepository.save(entity)
-```
+`AsaasWebhookSignatureVerifier` valida:
 
-Nesse momento o JPA/Hibernate grava os dados no banco.
+- existencia do segredo configurado
+- timestamp dentro da janela permitida
+- assinatura HMAC SHA-256 do conteudo
 
-### Passo 8. O service converte para resposta
+Isso existe para impedir payloads forjados e ataques de replay.
 
-Depois de salvar, o retorno e convertido para DTO:
+## 7. Fluxos principais do sistema
 
-```java
-mapper.toResponseDTO(condominioRepository.save(entity))
-```
+## 7.1 Fluxo de autenticacao do usuario
 
-Assim a API nao devolve a entidade inteira do banco. Ela devolve um objeto pensado para resposta.
+Importante: o backend nao possui endpoint `POST /login`.
 
-### Passo 9. O controller devolve JSON
+Fluxo real:
 
-O controller devolve o `CondominioResponseDTO`, com status `201 CREATED`.
+1. o usuario autentica no provedor OIDC
+2. o cliente recebe um JWT
+3. o cliente chama a API com `Authorization: Bearer <token>`
+4. o Spring Security valida issuer, audience e assinatura
+5. `JwtRoleConverter` transforma claims em roles do Spring
+6. `CurrentUserResolver` tenta associar o token a um `Usuario` local
+7. o endpoint segue apenas se autenticacao e autorizacao estiverem corretas
 
-### Passo 10. Se der erro, o tratamento global responde
+### Exemplo ponta a ponta: `GET /meu-contexto`
 
-Se algo falhar, o `ApiExceptionHandler` cuida da resposta.
+1. o request chega com Bearer token
+2. `SecurityFilterChain` autentica a requisicao
+3. `MeuContextoController.buscar()` chama `MeuContextoService`
+4. `MeuContextoServiceImpl` usa `CurrentUserResolver.getRequiredUsuario()`
+5. `AcessoRepository` busca os acessos do usuario
+6. a API responde com dados do usuario e seus vinculos de acesso
 
-Exemplos reais:
+Por que esse endpoint existe? Porque o frontend precisa descobrir rapidamente "quem sou eu no sistema" e "quais condominios/unidades posso acessar".
 
-- se o registro nao existir: retorna `404 NOT FOUND`
-- se a validacao falhar: retorna `400 BAD REQUEST`
-- se houver conflito de integridade: retorna `409 CONFLICT`
+## 7.2 Cadastro e gestao de condominio
 
-## 5. Explicacao da logica empregada
+O fluxo de condominio e um bom exemplo do padrao controller -> service -> repository.
 
-### Logica principal do sistema
+### Exemplo ponta a ponta: `POST /condominios`
 
-A logica do projeto e simples e muito comum em APIs de cadastro: o sistema organiza entidades relacionadas e garante que essas relacoes existam antes de salvar.
+1. o cliente envia um `CondominioRequestDTO`
+2. `CondominioController.criar(...)` recebe o body validado
+3. `@PreAuthorize` exige `ADMIN` ou `SINDICO`
+4. `CondominioServiceImpl.salvar(...)` valida CNPJ duplicado
+5. o service busca o `Endereco` existente
+6. `CondominioMapper` monta a entidade
+7. `CondominioRepository.saveAndFlush(...)` persiste o registro
+8. o mapper transforma a entidade em `CondominioResponseDTO`
+9. o controller devolve `201 Created`
 
-Exemplos reais da logica:
+### Regras importantes nesse modulo
 
-- para criar um `Condominio`, o `Endereco` informado precisa existir
-- para criar um `Bloco`, o `Condominio` informado precisa existir
-- para criar uma `Unidade`, o `Bloco` informado precisa existir
-- para criar uma `Cobranca`, a `Unidade` informada precisa existir
-- para criar um `Pagamento`, a `Cobranca` informada precisa existir
-- para criar um `Contrato`, o `Fornecedor` e o `Condominio` precisam existir
+- nao pode existir condominio ativo com o mesmo CNPJ
+- o endereco relacionado precisa existir
+- a listagem respeita o escopo do usuario autenticado
+- a exclusao e logica, nao fisica
+- um condominio nao pode ser removido se ainda tiver blocos, areas comuns, contas bancarias, contratos ou despesas vinculadas
 
-Em outras palavras: o sistema evita salvar registros "soltos" ou incoerentes.
+### Por que fazer assim
 
-### O papel dos DTOs
+Essa abordagem protege integridade referencial e evita apagar uma raiz estrutural que ainda sustenta dados importantes.
 
-O projeto nao recebe diretamente as entidades do banco no controller. Ele usa DTOs.
+Relacionamento com requisitos:
 
-Exemplo:
+- RF08: cadastro de condominio
+- RNF17: isolamento multi-condominio
 
-- entrada: `CondominioRequestDTO`
-- saida: `CondominioResponseDTO`
+## 7.3 Geracao e controle de cobrancas
 
-Isso e bom porque:
+O modulo de cobrancas e o centro do MVP financeiro.
 
-- protege a entidade
-- deixa a API mais organizada
-- facilita validacao
-- separa entrada e saida
+### Criacao manual de cobranca
 
-### O papel dos mappers
+Fluxo de `POST /cobrancas`:
 
-Os mappers fazem a traducao entre camadas.
+1. o controller recebe `CobrancaRequestDTO`
+2. `CobrancaServiceImpl.salvar(...)` valida:
+   - competencia obrigatoria
+   - nao permitir criar diretamente com status `PAGA`
+3. busca a unidade
+4. valida se o usuario pode operar no condominio daquela unidade
+5. impede duplicidade de cobranca ativa para a mesma unidade e competencia
+6. impede duplicidade de referencia externa
+7. salva a cobranca
+8. se necessario, chama `AsaasCobrancaGateway` para gerar referencia externa e URL de pagamento
+9. consulta dados Pix e preenche QR Code e copia e cola
+10. devolve a resposta ao cliente
 
-Exemplo real em `CondominioMapper`:
+### Geracao em lote
 
-- `toEntity(...)`: transforma o DTO em entidade
-- `updateEntity(...)`: atualiza uma entidade existente
-- `toResponseDTO(...)`: transforma a entidade em resposta
+`POST /cobrancas/gerar-lote`:
 
-Isso evita colocar muita logica de conversao dentro do controller ou do service.
+1. recebe `condominioId`, `competencia`, `valor` e `vencimento`
+2. valida escopo do condominio
+3. lista unidades do condominio
+4. cria cobranca para cada unidade que ainda nao possui cobranca ativa naquela competencia
+5. ignora duplicadas em vez de quebrar o lote inteiro
 
-### O papel das excecoes
+### Consulta, resumo e inadimplencia
 
-O projeto centraliza erros com `ApiExceptionHandler`.
+O projeto tambem implementa:
 
-Isso deixa a API mais profissional porque, em vez de quebrar com erro generico, ela responde com padrao.
+- `GET /cobrancas`
+- `GET /cobrancas/resumo`
+- `GET /cobrancas/dashboard`
+- `GET /cobrancas/inadimplentes`
+- `GET /cobrancas/{id}/pix`
 
-Exemplo:
+Essas consultas usam `Specification` para montar filtros por:
 
-- se o usuario informar um `enderecoId` inexistente, o service lanca `ResourceNotFoundException`
-- essa excecao e tratada globalmente
-- a API devolve uma resposta estruturada com data, status, mensagem e caminho
+- condominio
+- status
+- competencia
+- morador atual
+- escopo do sindico
 
-### Resumindo a ideia do projeto
+### Por que o resumo e o dashboard ficam no backend
 
-Se eu explicasse o projeto em linguagem bem simples, seria assim:
+Porque o backend ja conhece as regras de escopo e o estado correto da cobranca. Se o frontend calculasse tudo sozinho, haveria mais chance de inconsistencias.
 
-> O sistema recebe uma requisicao, valida os dados, verifica se os registros relacionados existem, monta a entidade correta, salva no banco e devolve uma resposta em JSON.
+Relacionamento com requisitos:
 
-Esse e o coracao do projeto.
+- RF13: geracao de taxas por competencia
+- RF14: visualizacao de cobrancas
+- RF15: emissao de Pix/boleto no contexto do gateway, ainda parcial no MVP
+- RF18: controle de inadimplencia
+- RF19: historico financeiro do morador
 
-## Observacoes finais importantes
+## 7.4 Registro e controle de pagamentos
 
-- O projeto usa `Spring Web`, `Spring Data JPA`, `Validation`, `Security`, `Flyway` e `PostgreSQL` no `pom.xml`.
-- Porem, pelo codigo atual, ainda nao aparecem classes implementadas nos packages `config`, `security`, `integration` e `shared`.
-- Isso indica que a estrutura do projeto ja foi preparada para crescer, mas parte dessas areas ainda parece estar vazia ou em construcao.
-- O arquivo `application.properties` hoje tem apenas `spring.application.name=Kondo`, entao as configuracoes de banco ainda nao aparecem nesse repositorio.
+O sistema tem dois caminhos para pagamento:
 
-## Sugestao de leitura para iniciantes
+- registro manual por operador
+- registro automatico por webhook
 
-Se voce quiser entender o projeto em ordem facil, vale ler nesta sequencia:
+### Pagamento manual
 
-1. `KondoApplication`
-2. um controller, por exemplo `CondominioController`
-3. a interface `CondominioService`
-4. a implementacao `CondominioServiceImpl`
-5. a entidade `Condominio`
-6. o `CondominioRepository`
-7. o `CondominioMapper`
-8. os DTOs `CondominioRequestDTO` e `CondominioResponseDTO`
-9. o `ApiExceptionHandler`
+Fluxo de `POST /pagamentos`:
 
-Essa sequencia ajuda muito porque mostra o fluxo completo de ponta a ponta.
+1. o controller exige `ADMIN` ou `SINDICO`
+2. `PagamentoServiceImpl.salvar(...)` busca a cobranca
+3. valida escopo do condominio
+4. impede pagamento em cobranca ja paga
+5. impede `transactionId` duplicado
+6. salva o pagamento
+7. atualiza a cobranca para `PAGA`
+8. registra auditoria
+9. devolve `PagamentoResponseDTO`
+
+Por que atualizar a cobranca no mesmo service? Porque pagamento e status da cobranca precisam ficar consistentes.
+
+## 7.5 Integracao com pagamentos e webhook
+
+### Criacao da cobranca externa
+
+`AsaasCobrancaGatewayImpl` abstrai a integracao com o Asaas.
+
+Quando a integracao esta habilitada e ha API key:
+
+1. procura ou cria o cliente no Asaas
+2. cria um pagamento externo do tipo Pix
+3. recebe `id` externo e `invoiceUrl`
+4. consulta o QR Code Pix
+5. devolve essas informacoes para a cobranca local
+
+Quando a integracao nao esta habilitada:
+
+- o gateway gera referencias simuladas
+- isso permite desenvolvimento e testes do backend sem depender do ambiente externo
+
+Essa escolha foi importante para manter o MVP produtivo em ambiente local e CI.
+
+### Processamento do webhook
+
+Fluxo ponta a ponta de `POST /webhooks/asaas`:
+
+1. o Asaas envia o payload bruto
+2. `AsaasWebhookController` valida assinatura HMAC ou token legado
+3. o payload JSON e convertido para `AsaasPaymentWebhookRequestDTO`
+4. `AsaasWebhookServiceImpl.processar(...)` valida os campos obrigatorios
+5. verifica se o evento externo ja foi processado em `WebhookEventoProcessado`
+6. ignora eventos repetidos
+7. processa apenas `PAYMENT_RECEIVED`
+8. localiza a cobranca pela referencia externa
+9. impede duplicidade de `transactionId`
+10. cria `Pagamento`
+11. marca a `Cobranca` como `PAGA`
+12. registra auditoria
+13. registra o evento processado
+14. responde `PROCESSED` ou `IGNORED`
+
+### Por que a idempotencia foi implementada
+
+Webhooks podem ser reenviados pelo provedor. Sem idempotencia, o sistema poderia registrar pagamento duplicado. Por isso o projeto protege o fluxo em duas frentes:
+
+- tabela de eventos processados por `eventoExternoId`
+- unicidade de `transactionId` em `Pagamento`
+
+Relacionamento com requisitos:
+
+- RF16: registro automatico de pagamento por webhook
+- RF17: integracao com gateway
+- RNF06: validacao de webhook
+- RNF07 e RNF20: protecao contra duplicidade e idempotencia
+- RNF21: registro de eventos financeiros
+
+## 8. Como os componentes se conectam na pratica
+
+## 8.1 Exemplo resumido: autenticacao e contexto
+
+`JWT -> SecurityFilterChain -> JwtDecoder -> JwtRoleConverter -> MeuContextoController -> MeuContextoServiceImpl -> CurrentUserResolver + AcessoRepository -> JSON`
+
+## 8.2 Exemplo resumido: cadastro de condominio
+
+`POST /condominios -> CondominioController -> CondominioServiceImpl -> EnderecoRepository + CondominioMapper + CondominioRepository -> CondominioResponseDTO`
+
+## 8.3 Exemplo resumido: criacao de cobranca com Pix
+
+`POST /cobrancas -> CobrancaController -> CobrancaServiceImpl -> UnidadeRepository + CobrancaRepository -> AsaasCobrancaGateway -> CobrancaResponseDTO`
+
+## 8.4 Exemplo resumido: webhook de pagamento
+
+`POST /webhooks/asaas -> AsaasWebhookController -> AsaasWebhookSignatureVerifier -> AsaasWebhookServiceImpl -> CobrancaRepository + PagamentoRepository + AuditoriaService + WebhookEventoProcessadoRepository -> WebhookProcessamentoResponseDTO`
+
+## 9. Relacao com os requisitos do projeto
+
+Os pontos mais claramente implementados no backend atual sao:
+
+- RF01 e RF02: autenticacao OIDC e validacao de JWT
+- RF04 e RF05: autorizacao por claims e identidade externa vinculada ao usuario local
+- RF07: auditoria de eventos importantes
+- RF08 a RF12: estrutura do condominio
+- RF13 e RF14: cobrancas por competencia e visualizacao
+- RF16 e RF17: webhook e integracao com gateway
+- RF18 e RF19: inadimplencia, historico e visao financeira por perfil
+- RNF16, RNF17, RNF19, RNF20 e RNF27: arquitetura stateless, isolamento por condominio, consistencia transacional, idempotencia e versionamento de banco
+
+Tambem e importante registrar o que ainda nao esta completo no backend atual:
+
+- RF03 e RF06: recuperacao de credenciais e logout federado nao possuem endpoint proprio
+- RF15: o fluxo de emissao existe via Asaas, mas ainda esta classificado como parcial no projeto
+- recursos de notificacao, WhatsApp, relatorios e analise avancada continuam fora do MVP consolidado
+
+## 10. Conclusao
+
+O backend do Kondo foi estruturado do jeito mais comum e recomendado para um projeto Spring Boot com regra de negocio real:
+
+- controllers finos
+- services com orquestracao e validacao
+- repositories para persistencia
+- DTOs e mappers para separar API de banco
+- Spring Security para JWT, RBAC e escopo
+- transacoes para manter consistencia
+- integracao externa isolada atras de gateway
+
+Isso foi feito assim porque o sistema nao e apenas um CRUD simples. Ele precisa lidar com identidade federada, multi-condominio, dados financeiros e eventos externos. A arquitetura atual organiza essas preocupacoes de forma clara, o que torna o MVP mais seguro, mais ensinavel e mais facil de evoluir.
