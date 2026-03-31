@@ -55,7 +55,7 @@ O modulo financeiro e o core do MVP.
 **Cobranca**  
 Requisitos: `RF13`, `RF14`
 
-- geracao de cobrancas manual
+- geracao de cobrancas automáticas
 - geracao de cobrancas em lote simples
 - visualizacao por morador e por sindico
 
