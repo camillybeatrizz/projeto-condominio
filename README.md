@@ -120,12 +120,12 @@ Fluxo principal:
 2. o backend valida a assinatura
 3. o backend verifica o `transactionId` para garantir idempotencia
 4. o sistema registra o pagamento
-5. a cobranca e atualizada para `PAGA`
-6. o evento e registrado em auditoria
+5. a cobranca é atualizada para `PAGA`
+6. o evento é registrado em auditoria
 
 ### 6. Inadimplencia
 
-A inadimplencia e identificada a partir de cobrancas vencidas e ainda nao pagas.
+A inadimplencia é identificada a partir de cobrancas vencidas e ainda nao pagas.
 
 ## Plano de Implementacao
 
@@ -255,7 +255,7 @@ Neste repositorio, a implementacao consolidada hoje corresponde ao nucleo backen
 - Spring Data JPA
 - Flyway
 - OpenAPI / Swagger
-- banco relacional
+- banco relacional - PostgreSQL
 
 ## Execucao local
 
