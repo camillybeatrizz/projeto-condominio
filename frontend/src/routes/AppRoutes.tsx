@@ -1,23 +1,73 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { SelecaoContextoPage } from '../pages/SelecaoContextoPage';
+import { MainLayout } from '../components/MainLayout';
 import { Perfil } from '../types/api';
 
 // Mocks para as páginas que serão criadas nas próximas fases
+const DashboardGestao = () => (
+  <MainLayout breadcrumbs={[{ label: 'Dashboard' }]}>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-kondo-gray-900">Dashboard de Gestão</h1>
+        <button className="px-4 py-2 bg-kondo-purple-600 text-white rounded-lg font-medium hover:bg-kondo-purple-700 transition-colors">
+          Novo Relatório
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-32 animate-pulse" />
+        ))}
+      </div>
+      <div className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-64" />
+    </div>
+  </MainLayout>
+);
+
+const PortalMorador = () => (
+  <MainLayout breadcrumbs={[{ label: 'Portal do Morador' }]}>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-kondo-gray-900">Bem-vindo ao seu Portal</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-48" />
+        <div className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-48" />
+      </div>
+    </div>
+  </MainLayout>
+);
+
 const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="p-8">
-    <h1 className="text-2xl font-bold">{title}</h1>
-    <p className="mt-4 text-kondo-gray-600">Esta página está em desenvolvimento.</p>
-  </div>
+  <MainLayout breadcrumbs={[{ label: title }]}>
+    <div className="p-8 bg-white rounded-xl border border-kondo-gray-200 shadow-sm">
+      <h1 className="text-2xl font-bold">{title}</h1>
+      <p className="mt-4 text-kondo-gray-600">Esta página está em desenvolvimento.</p>
+    </div>
+  </MainLayout>
 );
 
 export function AppRoutes() {
   return (
     <Routes>
       {/* Rota Pública de Login (Mockada para o MVP) */}
-      <Route path="/login" element={<PlaceholderPage title="Página de Login (Simulada)" />} />
+      <Route path="/login" element={
+        <div className="flex items-center justify-center h-screen bg-kondo-gray-50">
+          <div className="bg-white p-8 rounded-2xl shadow-xl border border-kondo-gray-200 w-full max-w-md">
+            <h1 className="text-2xl font-bold mb-6 text-center">Login Kondo</h1>
+            <p className="text-kondo-gray-600 text-center mb-6">Em um cenário real, você seria redirecionado para o Keycloak.</p>
+            <button 
+              onClick={() => {
+                localStorage.setItem('kondo_token', 'mock-token');
+                window.location.href = '/selecionar-contexto';
+              }}
+              className="w-full py-3 bg-kondo-purple-600 text-white rounded-xl font-bold hover:bg-kondo-purple-700 transition-all"
+            >
+              Simular Login
+            </button>
+          </div>
+        </div>
+      } />
 
-      {/* Rota de Seleção de Contexto (Protegida) */}
+      {/* Rota de Seleção de Contexto (Protegida) - Layout Especial */}
       <Route 
         path="/selecionar-contexto" 
         element={
@@ -32,7 +82,7 @@ export function AppRoutes() {
         path="/dashboard" 
         element={
           <ProtectedRoute allowedRoles={[Perfil.SINDICO, Perfil.ADMIN]}>
-            <PlaceholderPage title="Dashboard de Gestão" />
+            <DashboardGestao />
           </ProtectedRoute>
         } 
       />
@@ -42,10 +92,24 @@ export function AppRoutes() {
         path="/portal-morador" 
         element={
           <ProtectedRoute allowedRoles={[Perfil.MORADOR]}>
-            <PlaceholderPage title="Portal do Morador" />
+            <PortalMorador />
           </ProtectedRoute>
         } 
       />
+
+      {/* Rotas Administrativas Genéricas */}
+      <Route path="/admin/*" element={
+        <ProtectedRoute allowedRoles={[Perfil.ADMIN]}>
+          <PlaceholderPage title="Área Administrativa" />
+        </ProtectedRoute>
+      } />
+
+      {/* Rotas de Gestão Genéricas */}
+      <Route path="/gestao/*" element={
+        <ProtectedRoute allowedRoles={[Perfil.SINDICO]}>
+          <PlaceholderPage title="Área de Gestão" />
+        </ProtectedRoute>
+      } />
 
       {/* Redirecionamento Padrão */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

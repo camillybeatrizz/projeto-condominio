@@ -36,11 +36,11 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
 ## Fase 3: Layout Base e Navegação Dinâmica
 **Objetivo:** Criar a moldura do sistema que se adapta ao perfil.
 
-- [ ] **Task 3.1: Layout Principal (AppShell)**
+- [x] **Task 3.1: Layout Principal (AppShell)**
   - Criar Sidebar responsiva e Navbar.
   - O Header deve exibir visualmente o Perfil Ativo e o Condomínio selecionado.
   - O menu da Sidebar deve ser filtrado dinamicamente com base no perfil ativo.
-- [ ] **Task 3.2: Feedback Visual Global**
+- [x] **Task 3.2: Feedback Visual Global**
   - Implementar provedor de Toasts (Sonner ou Shadcn).
   - Criar componentes de Loading e Skeletons para transição de rotas.
 
