@@ -22,13 +22,13 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
 ## Fase 2: Autenticação e Gestão de Contexto (OIDC)
 **Objetivo:** Garantir o acesso seguro e a identificação do perfil do usuário.
 
-- [ ] **Task 2.1: Provedor de Autenticação OIDC**
+- [x] **Task 2.1: Provedor de Autenticação OIDC**
   - Configurar o `AuthProvider` genérico para suportar Keycloak/Pinniped.
   - Implementar hook `useAuth` para gerenciar estado de login.
-- [ ] **Task 2.2: Integração com /meu-contexto**
+- [x] **Task 2.2: Integração com /meu-contexto**
   - Criar service para chamar `GET /meu-contexto`.
   - Implementar tela de **Seleção de Contexto**: se o usuário tiver > 1 acesso, exibir interface de cards (`05b-context-selector.png`) para escolha de condomínio/perfil.
-- [ ] **Task 2.3: Guarda de Rotas (RBAC)**
+- [x] **Task 2.3: Guarda de Rotas (RBAC)**
   - Implementar componente `ProtectedRoute` que valida permissões por Role (`ADMIN`, `SINDICO`, `MORADOR`).
 
 ---
