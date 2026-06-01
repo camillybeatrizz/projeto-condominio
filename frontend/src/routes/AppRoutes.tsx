@@ -3,6 +3,8 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { SelecaoContextoPage } from '../pages/SelecaoContextoPage';
 import { DashboardGestaoPage } from '../pages/DashboardGestaoPage';
 import { PortalMoradorPage } from '../pages/PortalMoradorPage';
+import { GestaoEstruturaPage } from '../pages/GestaoEstruturaPage';
+import { CentralChamadosPage } from '../pages/CentralChamadosPage';
 import { MainLayout } from '../components/MainLayout';
 import { Perfil } from '../types/api';
 
@@ -67,6 +69,15 @@ export function AppRoutes() {
         } 
       />
 
+      <Route 
+        path="/morador/chamados" 
+        element={
+          <ProtectedRoute allowedRoles={[Perfil.MORADOR]}>
+            <CentralChamadosPage />
+          </ProtectedRoute>
+        } 
+      />
+
       {/* Rotas Administrativas Genéricas */}
       <Route path="/admin/*" element={
         <ProtectedRoute allowedRoles={[Perfil.ADMIN]}>
@@ -74,7 +85,19 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Rotas de Gestão Genéricas */}
+      {/* Rotas de Gestão */}
+      <Route path="/gestao/estrutura" element={
+        <ProtectedRoute allowedRoles={[Perfil.SINDICO]}>
+          <GestaoEstruturaPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/gestao/chamados" element={
+        <ProtectedRoute allowedRoles={[Perfil.SINDICO]}>
+          <CentralChamadosPage />
+        </ProtectedRoute>
+      } />
+
       <Route path="/gestao/*" element={
         <ProtectedRoute allowedRoles={[Perfil.SINDICO]}>
           <PlaceholderPage title="Área de Gestão" />

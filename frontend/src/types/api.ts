@@ -11,6 +11,12 @@ export enum StatusCobranca {
   CANCELADA = 'CANCELADA',
 }
 
+export enum StatusChamado {
+  ABERTO = 'ABERTO',
+  ANDAMENTO = 'ANDAMENTO',
+  CONCLUIDO = 'CONCLUIDO',
+}
+
 export enum FormaPagamento {
   PIX = 'PIX',
   BOLETO = 'BOLETO',
@@ -45,6 +51,42 @@ export interface PageResponse<T> {
   last: boolean;
   empty: boolean;
 }
+
+export interface BlocoResponse {
+  id: string;
+  nome: string;
+  condominioId: string;
+}
+
+export interface UnidadeResponse {
+  id: string;
+  numero: string;
+  andar: string;
+  tipo: string;
+  blocoId: string;
+  moradorId?: string;
+}
+
+export interface AreaComumResponse {
+  id: string;
+  nome: string;
+  descricao: string;
+  capacidade: number;
+  condominioId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChamadoResponse {
+  id: string;
+  descricao: string;
+  status: StatusChamado;
+  dataAbertura: string;
+  unidadeId: string;
+}
+
+export interface CobrancaResponse {
+...
 
 export interface CobrancaResponse {
   id: string;

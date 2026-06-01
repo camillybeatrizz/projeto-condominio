@@ -66,10 +66,10 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
 ## Fase 5: Estrutura, Cadastro e Operacional
 **Objetivo:** Permitir a gestão da hierarquia do condomínio e chamados.
 
-- [ ] **Task 5.1: Gestão de Estrutura (Hierárquica)**
+- [x] **Task 5.1: Gestão de Estrutura (Hierárquica)**
   - Listagem de Blocos e Unidades vinculadas ao condomínio selecionado.
   - Visualização de Áreas Comuns (Apenas listagem para o MVP).
-- [ ] **Task 5.2: Central de Chamados**
+- [x] **Task 5.2: Central de Chamados**
   - Formulário de abertura de chamados para Moradores.
   - Dashboard de gestão de chamados para Síndicos (Mudança de status).
 - [ ] **Task 5.3: Logs de Auditoria**
