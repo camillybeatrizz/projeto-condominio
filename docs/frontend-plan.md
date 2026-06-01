@@ -5,15 +5,15 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
 ## Fase 1: Setup e Infraestrutura Core
 **Objetivo:** Preparar o esqueleto do projeto e as ferramentas base.
 
-- [ ] **Task 1.1: Inicialização do Projeto**
+- [x] **Task 1.1: Inicialização do Projeto**
   - Executar `vite create` com template `react-ts`.
   - Instalar dependências base: `axios`, `lucide-react`, `react-router-dom`, `@tanstack/react-query`, `zod`, `react-hook-form`, `oidc-client-ts`.
   - Configurar Tailwind CSS e inicializar Shadcn/ui.
-- [ ] **Task 1.2: Cliente de API e Interceptors**
+- [x] **Task 1.2: Cliente de API e Interceptors**
   - Implementar o `axios-client.ts` com base na URL do `.env`.
   - Criar interceptor para injetar o `Bearer Token`.
   - Criar interceptor global para tratamento de erros (401, 403, 422).
-- [ ] **Task 1.3: Estrutura de Pastas e Types**
+- [x] **Task 1.3: Estrutura de Pastas e Types**
   - Criar árvore de diretórios conforme a `frontend-architecture.md`.
   - Criar `types/api.ts` espelhando os DTOs e Enums do backend (Perfil, StatusCobranca).
 
@@ -27,7 +27,7 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
   - Implementar hook `useAuth` para gerenciar estado de login.
 - [ ] **Task 2.2: Integração com /meu-contexto**
   - Criar service para chamar `GET /meu-contexto`.
-  - Implementar tela de **Seleção de Contexto**: se o usuário tiver > 1 acesso, deve escolher qual condomínio/perfil quer operar.
+  - Implementar tela de **Seleção de Contexto**: se o usuário tiver > 1 acesso, exibir interface de cards (`05b-context-selector.png`) para escolha de condomínio/perfil.
 - [ ] **Task 2.3: Guarda de Rotas (RBAC)**
   - Implementar componente `ProtectedRoute` que valida permissões por Role (`ADMIN`, `SINDICO`, `MORADOR`).
 
@@ -38,6 +38,7 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
 
 - [ ] **Task 3.1: Layout Principal (AppShell)**
   - Criar Sidebar responsiva e Navbar.
+  - O Header deve exibir visualmente o Perfil Ativo e o Condomínio selecionado.
   - O menu da Sidebar deve ser filtrado dinamicamente com base no perfil ativo.
 - [ ] **Task 3.2: Feedback Visual Global**
   - Implementar provedor de Toasts (Sonner ou Shadcn).
@@ -45,12 +46,14 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
 
 ---
 
-## Fase 4: Módulo Financeiro (Core do MVP)
-**Objetivo:** Implementar o fluxo de valor: Dashboard -> Cobrança -> Pagamento Pix.
+## Fase 4: Módulo Financeiro e Dashboards
+**Objetivo:** Implementar o fluxo de valor e visões específicas por perfil.
 
 - [ ] **Task 4.1: Dashboard Financeiro (Síndico/Admin)**
   - Consumir `GET /cobrancas/dashboard` e `GET /cobrancas/resumo`.
   - Implementar cards de indicadores e lista de inadimplentes recentes.
+- [ ] **Task 4.1b: Portal do Morador (Autoatendimento)**
+  - Criar visão simplificada focada na próxima fatura e status de chamados do próprio morador.
 - [ ] **Task 4.2: Gestão de Cobranças**
   - Tela de listagem de cobranças com filtros de Competência e Status.
   - Implementar listagem específica para o Morador (apenas as dele).

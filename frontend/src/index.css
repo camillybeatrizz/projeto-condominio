@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #F9FAFB;
+    --foreground: #111827;
+  }
+
+  * {
+    @apply border-kondo-gray-200;
+  }
+
+  body {
+    @apply bg-kondo-gray-50 text-kondo-gray-900 font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight text-kondo-gray-900;
+  }
+}
+
+@layer components {
+  .card-gradient-purple {
+    @apply bg-gradient-to-b from-kondo-purple-700 to-kondo-purple-800;
+  }
+}
