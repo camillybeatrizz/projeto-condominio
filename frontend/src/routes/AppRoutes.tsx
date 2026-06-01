@@ -1,40 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { SelecaoContextoPage } from '../pages/SelecaoContextoPage';
+import { DashboardGestaoPage } from '../pages/DashboardGestaoPage';
+import { PortalMoradorPage } from '../pages/PortalMoradorPage';
 import { MainLayout } from '../components/MainLayout';
 import { Perfil } from '../types/api';
-
-// Mocks para as páginas que serão criadas nas próximas fases
-const DashboardGestao = () => (
-  <MainLayout breadcrumbs={[{ label: 'Dashboard' }]}>
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-kondo-gray-900">Dashboard de Gestão</h1>
-        <button className="px-4 py-2 bg-kondo-purple-600 text-white rounded-lg font-medium hover:bg-kondo-purple-700 transition-colors">
-          Novo Relatório
-        </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-32 animate-pulse" />
-        ))}
-      </div>
-      <div className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-64" />
-    </div>
-  </MainLayout>
-);
-
-const PortalMorador = () => (
-  <MainLayout breadcrumbs={[{ label: 'Portal do Morador' }]}>
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-kondo-gray-900">Bem-vindo ao seu Portal</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-48" />
-        <div className="bg-white p-6 rounded-xl border border-kondo-gray-200 shadow-sm h-48" />
-      </div>
-    </div>
-  </MainLayout>
-);
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <MainLayout breadcrumbs={[{ label: title }]}>
@@ -82,7 +52,7 @@ export function AppRoutes() {
         path="/dashboard" 
         element={
           <ProtectedRoute allowedRoles={[Perfil.SINDICO, Perfil.ADMIN]}>
-            <DashboardGestao />
+            <DashboardGestaoPage />
           </ProtectedRoute>
         } 
       />
@@ -92,7 +62,7 @@ export function AppRoutes() {
         path="/portal-morador" 
         element={
           <ProtectedRoute allowedRoles={[Perfil.MORADOR]}>
-            <PortalMorador />
+            <PortalMoradorPage />
           </ProtectedRoute>
         } 
       />

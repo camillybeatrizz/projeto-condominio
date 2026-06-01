@@ -49,15 +49,15 @@ Este plano detalha as etapas para a implementação do frontend do KONDO, seguin
 ## Fase 4: Módulo Financeiro e Dashboards
 **Objetivo:** Implementar o fluxo de valor e visões específicas por perfil.
 
-- [ ] **Task 4.1: Dashboard Financeiro (Síndico/Admin)**
+- [x] **Task 4.1: Dashboard Financeiro (Síndico/Admin)**
   - Consumir `GET /cobrancas/dashboard` e `GET /cobrancas/resumo`.
   - Implementar cards de indicadores e lista de inadimplentes recentes.
-- [ ] **Task 4.1b: Portal do Morador (Autoatendimento)**
+- [x] **Task 4.1b: Portal do Morador (Autoatendimento)**
   - Criar visão simplificada focada na próxima fatura e status de chamados do próprio morador.
 - [ ] **Task 4.2: Gestão de Cobranças**
   - Tela de listagem de cobranças com filtros de Competência e Status.
   - Implementar listagem específica para o Morador (apenas as dele).
-- [ ] **Task 4.3: Tela de Pagamento Pix e Polling**
+- [x] **Task 4.3: Tela de Pagamento Pix e Polling**
   - Criar componente de exibição de QR Code e Copia-e-Cola (`GET /cobrancas/{id}/pix`).
   - **Lógica de Polling:** Implementar verificação automática de status a cada 10s até detectar `PAGA`.
 
