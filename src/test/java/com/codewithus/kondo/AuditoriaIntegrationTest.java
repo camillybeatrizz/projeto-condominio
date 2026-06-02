@@ -30,7 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @org.springframework.boot.test.context.SpringBootTest(properties = {
         "kondo.security.enabled=false",
-        "kondo.integrations.asaas.webhook.access-token=asaas-test-token"
+        "kondo.integrations.asaas.webhook.access-token=asaas-test-token",
+        "kondo.integrations.asaas.webhook.allow-legacy-access-token=true"
 })
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(addFilters = false)
 class AuditoriaIntegrationTest extends IntegrationTestSupport {
