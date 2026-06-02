@@ -5,6 +5,7 @@ import { DashboardGestaoPage } from '../pages/DashboardGestaoPage';
 import { PortalMoradorPage } from '../pages/PortalMoradorPage';
 import { GestaoEstruturaPage } from '../pages/GestaoEstruturaPage';
 import { CentralChamadosPage } from '../pages/CentralChamadosPage';
+import { GestaoCobrancasPage } from '../pages/GestaoCobrancasPage';
 import { MainLayout } from '../components/MainLayout';
 import { Perfil } from '../types/api';
 
@@ -70,6 +71,15 @@ export function AppRoutes() {
       />
 
       <Route 
+        path="/morador/cobrancas" 
+        element={
+          <ProtectedRoute allowedRoles={[Perfil.MORADOR]}>
+            <GestaoCobrancasPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
         path="/morador/chamados" 
         element={
           <ProtectedRoute allowedRoles={[Perfil.MORADOR]}>
@@ -95,6 +105,12 @@ export function AppRoutes() {
       <Route path="/gestao/chamados" element={
         <ProtectedRoute allowedRoles={[Perfil.SINDICO]}>
           <CentralChamadosPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/financeiro/cobrancas" element={
+        <ProtectedRoute allowedRoles={[Perfil.SINDICO]}>
+          <GestaoCobrancasPage />
         </ProtectedRoute>
       } />
 

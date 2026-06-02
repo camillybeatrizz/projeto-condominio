@@ -13,7 +13,8 @@ import {
 import { MainLayout } from '../components/MainLayout';
 import { FinancialCard, Card } from '../components/Card';
 import { cobrancaService } from '../services/cobranca.service';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '../providers/auth-context';
+import { formatCurrency, formatDateBr } from '../utils/formatters';
 
 export function DashboardGestaoPage() {
   const { activeAcesso } = useAuth();
@@ -24,17 +25,6 @@ export function DashboardGestaoPage() {
     queryFn: () => cobrancaService.getDashboard(condominioId),
     enabled: !!condominioId,
   });
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value || 0);
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR');
-  };
 
   return (
     <MainLayout breadcrumbs={[{ label: 'Dashboard' }]}>
@@ -119,7 +109,7 @@ export function DashboardGestaoPage() {
                   {dashboard?.pagamentosRecentes.map((pagamento) => (
                     <tr key={pagamento.id} className="hover:bg-kondo-gray-50/50 transition-colors group">
                       <td className="px-6 py-4 text-sm text-kondo-gray-600 font-medium">
-                        {formatDate(pagamento.dataPagamento)}
+                        {formatDateBr(pagamento.dataPagamento)}
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-kondo-gray-900">
                         {formatCurrency(pagamento.valor)}
@@ -166,7 +156,7 @@ export function DashboardGestaoPage() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-kondo-gray-900">Apto {cobranca.unidadeId.substring(0, 4)}</p>
-                      <p className="text-xs text-kondo-red-600 font-medium">Vencido em {formatDate(cobranca.vencimento)}</p>
+                      <p className="text-xs text-kondo-red-600 font-medium">Vencido em {formatDateBr(cobranca.vencimento)}</p>
                     </div>
                   </div>
                   <div className="text-right">

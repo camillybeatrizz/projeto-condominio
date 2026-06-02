@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   QrCode, 
@@ -13,8 +13,9 @@ import {
 import { MainLayout } from '../components/MainLayout';
 import { Card, FinancialCard } from '../components/Card';
 import { cobrancaService } from '../services/cobranca.service';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '../providers/auth-context';
 import { StatusCobranca } from '../types/api';
+import { formatCurrency, formatDateBr } from '../utils/formatters';
 
 export function PortalMoradorPage() {
   const { activeAcesso } = useAuth();
@@ -22,7 +23,7 @@ export function PortalMoradorPage() {
   const [copied, setCopied] = useState(false);
 
   // 1. Buscar cobranças do morador
-  const { data: cobrancasPage, isLoading: loadingCobrancas } = useQuery({
+  const { data: cobrancasPage } = useQuery({
     queryKey: ['cobrancas-morador', activeAcesso?.unidadeId],
     queryFn: () => cobrancaService.list({
       condominioId: activeAcesso?.condominioId || '',
@@ -32,7 +33,7 @@ export function PortalMoradorPage() {
     enabled: !!activeAcesso?.unidadeId
   });
 
-  const proximaCobranca = cobrancasPage?.content.find(c => c.status === StatusCobranca.PENDENTE);
+  const proximaCobranca = cobrancasPage?.content.find(c => c.status === StatusCobranca.ABERTA);
 
   // 2. Buscar dados do Pix se houver cobrança pendente
   const { data: pixData, isLoading: loadingPix } = useQuery({
@@ -40,13 +41,6 @@ export function PortalMoradorPage() {
     queryFn: () => cobrancaService.getPix(proximaCobranca!.id),
     enabled: !!proximaCobranca?.id && showPixModal
   });
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value || 0);
-  };
 
   const copyToClipboard = () => {
     if (pixData?.pixCopiaCola) {
@@ -75,7 +69,7 @@ export function PortalMoradorPage() {
                     <>
                       <h2 className="text-4xl font-bold mb-2">{formatCurrency(proximaCobranca.valor)}</h2>
                       <p className="flex items-center gap-2 text-kondo-purple-100 text-sm">
-                        <Clock className="w-4 h-4" /> Vence em {new Date(proximaCobranca.vencimento).toLocaleDateString('pt-BR')}
+                        <Clock className="w-4 h-4" /> Vence em {formatDateBr(proximaCobranca.vencimento)}
                       </p>
                     </>
                   ) : (
@@ -110,7 +104,7 @@ export function PortalMoradorPage() {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-kondo-gray-900">Competência {c.competencia}</p>
-                        <p className="text-xs text-kondo-gray-500">Vencimento {new Date(c.vencimento).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-xs text-kondo-gray-500">Vencimento {formatDateBr(c.vencimento)}</p>
                       </div>
                     </div>
                     <div className="text-right">

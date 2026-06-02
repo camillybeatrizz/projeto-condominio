@@ -5,7 +5,7 @@ export enum Perfil {
 }
 
 export enum StatusCobranca {
-  PENDENTE = 'PENDENTE',
+  ABERTA = 'ABERTA',
   PAGA = 'PAGA',
   VENCIDA = 'VENCIDA',
   CANCELADA = 'CANCELADA',
@@ -84,9 +84,6 @@ export interface ChamadoResponse {
   dataAbertura: string;
   unidadeId: string;
 }
-
-export interface CobrancaResponse {
-...
 
 export interface CobrancaResponse {
   id: string;

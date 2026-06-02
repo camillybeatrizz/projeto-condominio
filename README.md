@@ -21,12 +21,14 @@ Validar o fluxo principal do produto: gestao do condominio + ciclo financeiro co
 
 ### Status atual
 
-No estado atual do repositorio, o backend do MVP esta essencialmente implementado e validado por testes automatizados.
+No estado atual do repositorio, o MVP esta demonstravel localmente com backend e frontend integrados.
 
 - backend financeiro com cobranca, Pix, webhook, pagamento automatico e auditoria
-- endpoints prontos para o frontend consumir via Swagger
+- frontend React integrado aos endpoints principais do backend
+- dashboard financeiro, tela de cobrancas, estrutura, portal do morador e chamados consumindo a API local
+- massa de dados local para demonstracao em `src/main/resources/data-local.sql`
 - exclusao logica nas entidades centrais para preservar historico
-- principal pendencia do MVP do produto: frontend minimo
+- principal ressalva para uso produtivo: substituir o login simulado do frontend por OIDC real
 
 ### Escopo do MVP
 
@@ -176,6 +178,8 @@ Fase critica para o diferencial do produto.
 - tela de cobrancas
 - exibicao de status
 - visualizacao de pagamentos processados
+- portal do morador com cobrancas e Pix
+- estrutura e chamados integrados ao backend
 
 ## Status do Plano
 
@@ -185,7 +189,7 @@ Fase critica para o diferencial do produto.
 - Fase 4 - Financeiro: concluida no backend
 - Fase 5 - Webhook: concluida no backend
 - Fase 6 - Auditoria: concluida no backend
-- Fase 7 - Frontend: pendente neste repositorio
+- Fase 7 - Frontend: concluida como MVP demonstravel localmente
 
 ## Evolucao Pos-MVP
 
@@ -227,6 +231,15 @@ Tambem ja estao implementados neste backend:
 - endpoints financeiros de `pix`, `resumo` e `dashboard`
 - soft delete para preservar historico
 
+No frontend, o repositorio possui uma camada React/Vite integrada a API local para demonstrar:
+
+- selecao de contexto por perfil
+- dashboard financeiro do sindico
+- gestao/listagem de cobrancas
+- visualizacao de Pix pelo morador
+- gestao estrutural de blocos e unidades
+- abertura e acompanhamento de chamados
+
 Os perfis atualmente refletidos no codigo e nas regras de negocio sao:
 
 - `ADMIN`
@@ -237,7 +250,7 @@ Os perfis atualmente refletidos no codigo e nas regras de negocio sao:
 
 O documento de requisitos em `docs/Especificações de Requisitos - KONDO.pdf` descreve uma visao mais ampla do produto, incluindo frontend web, integracoes externas e automacoes operacionais e financeiras.
 
-Neste repositorio, a implementacao consolidada hoje corresponde ao nucleo backend da plataforma. Itens como interface React, WhatsApp, envio de notificacoes, webhooks bancarios, Pix nativo, relatorios automaticos e cache devem ser interpretados como requisitos de evolucao do produto, salvo quando houver codigo e testes especificos cobrindo esses modulos.
+Neste repositorio, a implementacao consolidada hoje corresponde ao nucleo backend da plataforma e a um frontend MVP demonstravel. Itens como login OIDC real no frontend, WhatsApp, envio de notificacoes, webhooks bancarios, Pix nativo, relatorios automaticos e cache devem ser interpretados como requisitos de evolucao do produto, salvo quando houver codigo e testes especificos cobrindo esses modulos.
 
 ## Autenticacao e autorizacao
 
@@ -262,10 +275,25 @@ Neste repositorio, a implementacao consolidada hoje corresponde ao nucleo backen
 Exemplo para subir a API com configuracao local:
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+SPRING_PROFILES_ACTIVE=local ./mvnw spring-boot:run
 ```
 
-Com a seguranca habilitada, use um token JWT emitido pelo provedor configurado no ambiente.
+O perfil `local` usa H2 em memoria, seguranca aberta para estudo e carrega a massa de demonstracao de `src/main/resources/data-local.sql`.
+
+Para subir o frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+O frontend usa `VITE_API_URL=/api` e o proxy do Vite redireciona as chamadas para `http://localhost:8080`. Acesse:
+
+- API/Swagger: `http://localhost:8080/swagger-ui.html`
+- Frontend: `http://127.0.0.1:5173/`
+
+Com a seguranca habilitada fora do perfil local, use um token JWT emitido pelo provedor configurado no ambiente.
 
 ## Documentos importantes
 

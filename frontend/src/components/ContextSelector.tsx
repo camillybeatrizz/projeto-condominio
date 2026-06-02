@@ -1,5 +1,5 @@
 import { Building2, ChevronRight, Shield, User, Users } from 'lucide-react';
-import { Perfil } from '../../types/api';
+import { Perfil } from '../types/api';
 
 export interface ContextOption {
   id: string;

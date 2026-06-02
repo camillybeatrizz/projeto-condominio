@@ -1,9 +1,15 @@
-# 🏗️ Interface Development Plan - KONDO (Refined from Figma)
+# Interface Development Plan - KONDO
 
-Este plano detalha a construção da interface do sistema Kondo, integrando a visão de UX extraída do Figma com a estrutura técnica do back-end.
+Este plano detalha a construção da interface do sistema Kondo, integrando a visão de UX definida para o produto com a estrutura técnica do back-end.
 
-## 📂 Design Tokens (Foundations)
-Baseado no `docs/figma-export/src/styles/theme.css`.
+## Design Tokens (Foundations)
+
+Os tokens visuais originalmente extraidos do Figma ja foram incorporados ao frontend real do projeto. A fonte atual de verdade para cores, raios e estilos globais e:
+
+- `frontend/tailwind.config.js`
+- `frontend/src/index.css`
+
+A pasta `docs/figma-export` era apenas um artefato historico/exportado do Figma Make e nao e necessaria para build, execucao ou manutencao do frontend atual.
 
 ### Paleta de Cores (Kondo Palette)
 - **Primary (Purple):** `#7C3AED` (600), `#4C1D95` (900) - Identidade e Confiança.
@@ -20,7 +26,7 @@ Baseado no `docs/figma-export/src/styles/theme.css`.
 
 ---
 
-## 🟢 Fase 1: Atoms (Componentes Base)
+## Fase 1: Atoms (Componentes Base)
 *Implementação direta baseada em `src/app/components/ui/`.*
 
 ### Task 1.1: Buttons & Inputs
@@ -30,7 +36,7 @@ Baseado no `docs/figma-export/src/styles/theme.css`.
 
 ---
 
-## 🟡 Fase 2: Molecules & Shared Organisms
+## Fase 2: Molecules & Shared Organisms
 *Foco: Componentes de composição e estrutura de layout.*
 
 ### Task 2.1: Especialized Cards
@@ -48,7 +54,7 @@ Baseado no `docs/figma-export/src/styles/theme.css`.
 
 ---
 
-## 🔵 Fase 3: Core Modules (Páginas de Gestão)
+## Fase 3: Core Modules (Páginas de Gestão)
 *Foco: Integração com controllers do back-end.*
 
 ### Task 3.1: Dashboard (Síndico/Admin)
@@ -64,7 +70,7 @@ Baseado no `docs/figma-export/src/styles/theme.css`.
 
 ---
 
-## 🔴 Fase 4: Financeiro e Operacional
+## Fase 4: Financeiro e Operacional
 *Interfaces complexas e fluxos de dados.*
 
 ### Task 4.1: Cobranças e Pagamentos
@@ -76,7 +82,7 @@ Baseado no `docs/figma-export/src/styles/theme.css`.
 
 ---
 
-## 🛠️ Instruções para Execução
+## Instruções para Execução
 
 1. **Framework:** React + TypeScript + Tailwind CSS.
 2. **Icons:** Lucide React.

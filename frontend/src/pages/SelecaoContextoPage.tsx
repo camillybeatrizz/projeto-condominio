@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '../providers/auth-context';
 import { ContextSelector, ContextOption } from '../components/ContextSelector';
 import { Perfil, MeuAcesso } from '../types/api';
 

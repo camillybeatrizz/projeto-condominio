@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Home, MapPin, Plus, Search } from 'lucide-react';
+import { Building2, MapPin, Plus, Search } from 'lucide-react';
 import { MainLayout } from '../components/MainLayout';
 import { Card } from '../components/Card';
 import { estruturaService } from '../services/operacional.service';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '../providers/auth-context';
 import { useState } from 'react';
 
 export function GestaoEstruturaPage() {

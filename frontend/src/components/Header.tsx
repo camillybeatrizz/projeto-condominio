@@ -1,5 +1,5 @@
 import { Bell, Search, User, ChevronDown, LogOut } from 'lucide-react';
-import { useAuth } from '../providers/AuthProvider';
+import { useAuth } from '../providers/auth-context';
 import { Perfil } from '../types/api';
 
 interface HeaderProps {

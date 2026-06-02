@@ -2,7 +2,6 @@ import { NavLink } from 'react-router-dom';
 import { 
   Building2, 
   LayoutDashboard, 
-  Home, 
   CreditCard, 
   Wallet, 
   MessageSquare, 
@@ -13,11 +12,12 @@ import {
   ShieldCheck,
   FileText
 } from 'lucide-react';
-import { useAuth } from '../providers/AuthProvider';
+import type { LucideIcon } from 'lucide-react';
+import { useAuth } from '../providers/auth-context';
 import { Perfil } from '../types/api';
 
 interface NavItem {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   path: string;
   badge?: number;

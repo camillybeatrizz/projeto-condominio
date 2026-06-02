@@ -5,16 +5,15 @@ import {
   Clock, 
   CheckCircle2, 
   AlertCircle,
-  MoreVertical,
-  User,
   Home
 } from 'lucide-react';
 import { MainLayout } from '../components/MainLayout';
 import { Card } from '../components/Card';
 import { chamadoService } from '../services/operacional.service';
-import { useAuth } from '../providers/AuthProvider';
-import { Perfil, StatusChamado } from '../types/api';
+import { useAuth } from '../providers/auth-context';
+import { ChamadoResponse, Perfil, StatusChamado } from '../types/api';
 import { useState } from 'react';
+import { formatDateBr } from '../utils/formatters';
 
 export function CentralChamadosPage() {
   const { activeAcesso } = useAuth();
@@ -42,8 +41,8 @@ export function CentralChamadosPage() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: StatusChamado }) => 
-      chamadoService.updateStatus(id, status),
+    mutationFn: ({ chamado, status }: { chamado: ChamadoResponse; status: StatusChamado }) => 
+      chamadoService.updateStatus(chamado, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chamados'] });
     }
@@ -90,7 +89,7 @@ export function CentralChamadosPage() {
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
                       {getStatusBadge(chamado.status)}
-                      <span className="text-xs text-kondo-gray-400 font-medium">Aberto em {new Date(chamado.dataAbertura).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-xs text-kondo-gray-400 font-medium">Aberto em {formatDateBr(chamado.dataAbertura)}</span>
                     </div>
                     <p className="text-kondo-gray-900 font-medium leading-relaxed">
                       {chamado.descricao}
@@ -104,7 +103,7 @@ export function CentralChamadosPage() {
                     <div className="flex items-center gap-2">
                       {chamado.status === StatusChamado.ABERTO && (
                         <button 
-                          onClick={() => updateStatusMutation.mutate({ id: chamado.id, status: StatusChamado.ANDAMENTO })}
+                          onClick={() => updateStatusMutation.mutate({ chamado, status: StatusChamado.ANDAMENTO })}
                           className="px-3 py-1.5 text-xs font-bold text-kondo-purple-600 bg-kondo-purple-50 rounded-lg hover:bg-kondo-purple-100 transition-colors"
                         >
                           Atender
@@ -112,7 +111,7 @@ export function CentralChamadosPage() {
                       )}
                       {chamado.status === StatusChamado.ANDAMENTO && (
                         <button 
-                          onClick={() => updateStatusMutation.mutate({ id: chamado.id, status: StatusChamado.CONCLUIDO })}
+                          onClick={() => updateStatusMutation.mutate({ chamado, status: StatusChamado.CONCLUIDO })}
                           className="px-3 py-1.5 text-xs font-bold text-kondo-green-600 bg-kondo-green-50 rounded-lg hover:bg-kondo-green-100 transition-colors"
                         >
                           Concluir
@@ -169,8 +168,12 @@ export function CentralChamadosPage() {
                 Cancelar
               </button>
               <button 
-                disabled={!newChamadoDesc || createMutation.isPending}
-                onClick={() => createMutation.mutate({ descricao: newChamadoDesc, unidadeId: activeAcesso?.unidadeId! })}
+                disabled={!newChamadoDesc || !activeAcesso?.unidadeId || createMutation.isPending}
+                onClick={() => {
+                  if (activeAcesso?.unidadeId) {
+                    createMutation.mutate({ descricao: newChamadoDesc, unidadeId: activeAcesso.unidadeId });
+                  }
+                }}
                 className="px-6 py-2 text-sm font-bold text-white bg-kondo-purple-600 rounded-lg hover:bg-kondo-purple-700 transition-all shadow-md disabled:opacity-50"
               >
                 {createMutation.isPending ? 'Enviando...' : 'Abrir Chamado'}
